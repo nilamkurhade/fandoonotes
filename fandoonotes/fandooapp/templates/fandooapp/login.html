@@ -7,11 +7,15 @@
           {% csrf_token %}
           {# A more "HTML" way of creating the login form#}
           <label for="username">Username:</label>
-          <input type="text" name="username" placeholder="Username">
+          <input type="text" name="username" placeholder="Enter Username">
           <label for="password">Password:</label>
-          <input type="password" name="password" placeholder="Password">
+          <input type="password" name="password" placeholder="Enter Password">
 <input type="submit" name="" value="Login">
 </form>
+        <br>
+  <p><strong>-- OR --</strong></p>
+  <a href="{% url 'social:begin' 'github' %}">Login with GitHub</a><br>
+        <a href="{% url 'social:begin' 'facebook' %}">Login with Facebook</a>
 </div>
   </div>
 {% endblock %}

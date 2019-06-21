@@ -1,47 +1,59 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from django.test import TestCase
-from django.contrib.auth.models import User
-from . forms import UserForm   # import all forms
-# Create your tests here.
+import unittest
+from django.test import TestCase, Client
+from .forms import UserForm
+from django.urls import reverse
 
 
-class Setup_Class(TestCase):
-
-    def setUp(self):
-        self.user = User.objects.create(username="nilam", password="admin@1234", email="nilammore820@gmail.com")
+# Testing the urls
 
 
-class User_Form_Test(TestCase):
-
-    # Valid Form Data
-    def test_UserForm_valid(self):
-        form = UserForm(data={'username': "nilam", 'password': "admin@1234", 'email': "nilammore820@gmail.com"})
-        self.assertFalse(form.is_valid())
-
-    # Invalid Form Data
-    def test_UserForm_invalid(self):
-        form = UserForm(data={'username': "mp", 'password': "mp", 'email': ""})
-        self.assertFalse(form.is_valid())
-
-# test cases for views
+class SimpleTest(unittest.TestCase):
+    def SetUp(self):
+        # Every test needs a client
+        self.client = Client()
 
 
-class User_Views_Test(Setup_Class):
-    # Valid Data
-    def test_login_view(self):
-        user_login = self.client.login(username="nilam", password="admin@1234")
-        self.assertTrue(user_login)
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 302)
+# Testing the api
 
-    def test_signup_view(self):
-        response = self.client.get("signup")
+
+class EntryTest(TestCase):
+
+    def test_details(self):
+        # Issue a get request
+        response = self.client.get('/login/')
+        # check that the response is 200 OK.
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "Please confirm your email address to complete the registration")
 
-    # Invalid Data
-    def test_add_user_invalidform_view(self):
-        response = self.client.post("include url to post the data given",
-                                    {'username': "admin", 'password': "", 'email':"admin@gmail.com"})
-        self.assertTrue('"error": true' in response.content)
+    # test case for login api
+    def test_get_api_json(self):
+        response = self.client.get('/login/', format='json')
+        self.assertValidJsonResponse(response)
+
+    def assertValidJsonResponse(self, response):
+        pass
+
+    # test case for signup api
+    def test_signup_form(self):
+        # Issue a get request
+        response = self.client.get('/signup/')
+        # check that the response is 200 OK.
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_signup_api_json(self):
+        response = self.client.get('/signup/', format='json')
+        self.assertValidJsonResponse(response)
+
+    # test case for S3bucket api
+    def test_uploads3_api(self):
+        # Issue a get request
+        response = self.client.get('/upload/')
+        # check that the response is 200 OK.
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_s3upload_api_json(self):
+        response = self.client.get('/upload/', format='json')
+        self.assertValidJsonResponse(response)
+
+    

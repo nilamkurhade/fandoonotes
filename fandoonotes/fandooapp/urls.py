@@ -1,5 +1,6 @@
 from django.conf.urls import url
 from fandooapp import views
+from django.conf.urls import url, include
 
 
 # SET THE NAMESPACE!
@@ -10,5 +11,6 @@ app_name = 'fandooapp'
 urlpatterns = [
      url(r'^user_login/$', views.user_login, name='user_login'),
      url(r'^signup/$', views.signup, name='signup'),
+
 
 ]
