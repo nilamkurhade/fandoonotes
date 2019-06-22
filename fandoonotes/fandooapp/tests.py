@@ -25,6 +25,7 @@ class EntryTest(TestCase):
         response = self.client.get('/login/')
         # check that the response is 200 OK.
         self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Logout")
 
     # test case for login api
     def test_get_api_json(self):
@@ -56,4 +57,24 @@ class EntryTest(TestCase):
         response = self.client.get('/upload/', format='json')
         self.assertValidJsonResponse(response)
 
-    
+    # test case for social login
+    # test case for github login
+    def test_social_github_login_api(self):
+        # Issue a get request
+        response = self.client.get('/oauth/login/github/')
+        # check that the response is 302 found.
+        self.assertEqual(response.status_code, 302)
+
+    # test case for facebook login
+    def test_social_facebook_api(self):
+        # Issue a get request
+        response = self.client.get('/oauth/login/facebook/')
+        # check that the response is 302 found.
+        self.assertEqual(response.status_code, 302)
+
+    def test_social_facebook_login_api(self):
+        # Issue a get request
+        response = self.client.get('/settings/')
+        # check that the response is 302 found.
+        self.assertEqual(response.status_code, 302)
+
