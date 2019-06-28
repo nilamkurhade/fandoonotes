@@ -1,5 +1,5 @@
 from django import forms
-from fandooapp.models import UserProfileInfo
+from .models import UserProfileInfo
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 

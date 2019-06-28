@@ -1,9 +1,13 @@
+import json
 import self as self
 from django.contrib.auth import login, logout
-from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 import jwt
+from requests import Response
+from rest_framework import serializers, status
+
 from .forms import SignupForm
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.core.mail import EmailMessage
@@ -16,15 +20,16 @@ from django.shortcuts import render, redirect
 from django.core.mail import send_mail
 import boto3
 from django.conf import settings
-from django.shortcuts import render
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
 from .service import RedisMethods
 from django.views.decorators.cache import cache_page
-from django.contrib.auth.forms import AdminPasswordChangeForm, PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
-from django.contrib import messages
-from social_django.models import UserSocialAuth
+from .models import Notes
+from .serializer import NoteSerializer
+from django.shortcuts import render
+from django.http import HttpResponse
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 
 # view for index
@@ -53,6 +58,10 @@ def user_login(request):
         if request.method == 'POST':
             username = request.POST.get('username')
             password = request.POST.get('password')
+            # if username is None:
+            #     raise
+            # if password is None:
+            #     raise
             user = authenticate(username=username, password=password)
             if user:
                 if user.is_active:
@@ -79,7 +88,9 @@ def user_login(request):
                     }
                     return JsonResponse({'result': result})
                 else:
-                    return HttpResponse("Your account was inactive.")
+                    message = "Your account was inactive."
+                    status_code = 400
+                    return JsonResponse({'message': message, 'status': status_code})
             else:
                 print("Someone tried to login and failed.")
                 print("They used username: {} and password: {}".format(username, password))
@@ -182,3 +193,50 @@ def s3_upload(request):
 def home(request):
     return render(request, 'fandooapp/home1.html')
 
+
+class notes_list(APIView):
+
+    def get(self, request):
+
+        notes = Notes.objects.all()
+        # print(notes)
+        data = NoteSerializer(notes, many=True)
+        return Response(data.data)
+
+    def post(self, request):
+        serializer = NoteSerializer(data=request.data)
+        try:
+            if serializer.is_valid():
+                serializer.save()
+        except serializers.ValidationError:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.data)
+
+
+class pinNote(APIView):
+
+    def get_object(self, id=None):
+        try:
+            return Notes.object.get(id=id)
+        except Notes.DoesNotExist as e:
+            return Response({"error": "Given object not found."}, status=404)
+
+    def put(self, request, id=None):
+        data = request.data
+        instance = self.get_object(id)
+        serializer = NoteSerializer(instance, data=data)
+        notes = Notes.objects.all()
+        try:
+            if serializer.is_valid():
+                if notes.is_pin == False or None:
+                    notes.is_pin = True
+                    notes.save()
+                else:
+                    return Response("Already pin")
+                return Response("pin is set")
+            else:
+                serializer.save()
+        except serializers.ValidationError:
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # return JsonResponse(serializer.data, status=200)

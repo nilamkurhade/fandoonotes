@@ -30,11 +30,13 @@ urlpatterns = [
     url(r'^login/$', views.user_login, name='login'),
     url(r'^logout/$', views.user_logout, name='logout'),
     url(r'^oauth/', include('social_django.urls', namespace='social')),     # <--
-    # url(r'^settings/$', views.settings, name='settings'),
-    # url(r'^settings/password/$', views.password, name='password'),
     url(r'^signup/$', views.signup, name='signup'),
     url(r'^activate/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
         views.activate, name='activate'),
     url(r'^upload/$', views.s3_upload, name='upload'),
+    # url(r'^create_note/$', views.create_note, name='create_note'),
+    # url(r'^list_note/$', views.get_all_notes, name='list_note'),
+    url('notes/', views.notes_list.as_view()),
+    url('notes/', views.pinNote.as_view()),
 
 ]

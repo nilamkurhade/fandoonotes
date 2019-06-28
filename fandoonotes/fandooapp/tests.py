@@ -3,9 +3,6 @@ from __future__ import unicode_literals
 import unittest
 from django.test import TestCase, Client
 from .forms import UserForm
-from django.urls import reverse
-
-
 # Testing the urls
 
 
@@ -72,9 +69,5 @@ class EntryTest(TestCase):
         # check that the response is 302 found.
         self.assertEqual(response.status_code, 302)
 
-    def test_social_facebook_login_api(self):
-        # Issue a get request
-        response = self.client.get('/settings/')
-        # check that the response is 302 found.
-        self.assertEqual(response.status_code, 302)
+
 
