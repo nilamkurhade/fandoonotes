@@ -69,5 +69,37 @@ class EntryTest(TestCase):
         # check that the response is 302 found.
         self.assertEqual(response.status_code, 302)
 
+    # test case for crude operations
+    def test_notes_api(self):
+        response = self.client.get('/notes/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_notes_api_json(self):
+        response = self.client.get('/notes/', format='json')
+        self.assertValidJsonResponse(response)
+
+    # test case for crude operations
+    def test_labels_api(self):
+        response = self.client.get('/labels/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_labels_api_json(self):
+        response = self.client.get('/labels/', format='json')
+        self.assertValidJsonResponse(response)
 
 
+# class ViewTestCase(TestCase):
+#     """Test suite for the api views."""
+#
+#     def set_Up(self):
+#         """Define the test client and other test variables."""
+#         self.client = APIClient()
+#         self.notes_list = {'name': 'Test Note'}
+#         self.response = self.client.post(
+#             reverse('notes'),
+#             self.notes_list,
+#             format="json")
+#
+#     def test_api_can_create_a_notes(self):
+#         """Test the api has bucket creation capability."""
+#         self.assertEqual(self.response.status_code, status.HTTP_201_CREATED)

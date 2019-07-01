@@ -1,9 +1,8 @@
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils import six
 
+
 # generating token to send in email while reset the password
-
-
 class TokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
         return (

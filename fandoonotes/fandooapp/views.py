@@ -25,7 +25,9 @@ from django.views.decorators.csrf import csrf_exempt
 from .service import RedisMethods
 from django.views.decorators.cache import cache_page
 from .models import Notes
+from .models import Labels
 from .serializer import NoteSerializer
+from .serializer import LabelSerializer
 from django.shortcuts import render
 from django.http import HttpResponse
 from rest_framework.views import APIView
@@ -194,15 +196,21 @@ def home(request):
     return render(request, 'fandooapp/home1.html')
 
 
+# to create and display the list of notes
 class notes_list(APIView):
 
+    # generating list of notes
     def get(self, request):
 
         notes = Notes.objects.all()
-        # print(notes)
+        # redis_note = notes['Notes']
+        # RedisMethods.set_Notes_in_Redis(self, 'Notes', redis_note)
+        # note_data = RedisMethods.get_token(self, 'Notes')
+        # print(note_data)
         data = NoteSerializer(notes, many=True)
-        return Response(data.data)
+        return Response(data.data, status=200)
 
+    # creating new note
     def post(self, request):
         serializer = NoteSerializer(data=request.data)
         try:
@@ -214,29 +222,120 @@ class notes_list(APIView):
             return Response(serializer.data)
 
 
-class pinNote(APIView):
+class Notedata(APIView):
 
     def get_object(self, id=None):
-        try:
-            return Notes.object.get(id=id)
-        except Notes.DoesNotExist as e:
-            return Response({"error": "Given object not found."}, status=404)
+        print("asdasd",id)
+        a = Notes.objects.get(id=id)
+        print("Data",a)
+        return a
+    
+    def get(self,request, id=None):
+        data=self.get_object(id)
+        ser = NoteSerializer(data).data
+        return Response(ser)
 
     def put(self, request, id=None):
         data = request.data
-        instance = self.get_object(id)
-        serializer = NoteSerializer(instance, data=data)
-        notes = Notes.objects.all()
+        instance= self.get_object(id)
+        serializer = NoteSerializer(instance,  data=data)
         try:
             if serializer.is_valid():
-                if notes.is_pin == False or None:
-                    notes.is_pin = True
-                    notes.save()
-                else:
-                    return Response("Already pin")
-                return Response("pin is set")
-            else:
                 serializer.save()
         except serializers.ValidationError:
             return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            # return JsonResponse(serializer.data, status=200)
+        return JsonResponse(serializer.data, status=200)
+
+    # deleting the note
+    def delete(self, request, id):
+        try:
+            # GET THE OBJECT OF THAT note_od BY PASSING note_id TO THE get_object() FUNCTION
+            instance = self.get_object(id)
+            # CHECK THE NOTE is_deleted and is_trashed status Of both are True Then Update Both The Values
+            print(instance)
+            if instance.is_deleted == False:
+                # UPDATE THE is_deleted
+                instance.is_deleted = True
+                # UPDATE THE is_trashed
+                instance.is_trash = True
+                # SAVE THE RECORD
+                instance.save()
+            # RETURN THE RESPONSE MESSAGE AND CODE
+            return Response({"Message": "Note Deleted Successfully And Added To The Trash."}, status=200)
+            # ELSE EXCEPT THE ERROR AND SEND THE RESPONSE WITH ERROR MESSAGE
+        except Notes.DoesNotExist as e:
+            return Response({"Error": "Note Does Not Exist Or Deleted.."}, status=Response.status_code)
+
+
+# to create the label and list of labels
+class label_list(APIView):
+
+    # list of labels
+    def get(self, request):
+
+        labels = Labels.objects.all()
+        # print(notes)
+        data = LabelSerializer(labels, many=True)
+        return Response(data.data)
+
+    # creating the new label
+    def post(self, request):
+        serializer = LabelSerializer(data=request.data)
+        try:
+            if serializer.is_valid():
+                serializer.save()
+        except serializers.ValidationError:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.data)
+
+
+# performing operations like edit, delete on labels
+class LabelViewDetails(APIView):
+
+    # to get particular label id wise
+    def get_object(self, id=None):
+        try:
+            a = Labels.objects.get(id=id)
+            return a
+        except Notes.DoesNotExist as e:
+            return Response({"error": "Given object not found."}, status=404)
+
+    def get(self, request, id=None):
+        print("sdasdasdasda", id)
+        data = self.get_object(id)
+        print("sadadasd", data)
+        ser = LabelSerializer(data).data
+        return Response(ser)
+
+    # editing the label
+    def put(self, request, id=None):
+        data = request.data
+        instance= self.get_object(id)
+        serializer = LabelSerializer(instance,  data=data)
+        try:
+            if serializer.is_valid():
+                serializer.save()
+        except serializers.ValidationError:
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse(serializer.data, status=200)
+
+    # deleting the label
+    def delete(self, request, id):
+        try:
+            # GET THE OBJECT OF THAT note_od BY PASSING note_id TO THE get_object() FUNCTION
+            instance = self.get_object(id)
+            # CHECK THE NOTE is_deleted and is_trashed status Of both are True Then Update Both The Values
+            print(instance)
+            if instance.is_deleted == False:
+                # UPDATE THE is_deleted
+                instance.is_deleted = True
+                # UPDATE THE is_trashed
+                instance.is_trash = True
+                # SAVE THE RECORD
+                instance.save()
+            # RETURN THE RESPONSE MESSAGE AND CODE
+            return Response({"Message": "Note Deleted Successfully And Added To The Trash."}, status=200)
+            # ELSE EXCEPT THE ERROR AND SEND THE RESPONSE WITH ERROR MESSAGE
+        except Notes.DoesNotExist as e:
+            return Response({"Error": "Note Does Not Exist Or Deleted.."}, status=Response.status_code)

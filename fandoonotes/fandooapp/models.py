@@ -51,3 +51,8 @@ class Notes(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Labels(models.Model):
+    title = models.CharField(max_length=20, blank=False)
+    is_deleted = models.BooleanField(default=False, blank=True)
