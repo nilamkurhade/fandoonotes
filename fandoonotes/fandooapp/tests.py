@@ -87,19 +87,3 @@ class EntryTest(TestCase):
         response = self.client.get('/labels/', format='json')
         self.assertValidJsonResponse(response)
 
-
-# class ViewTestCase(TestCase):
-#     """Test suite for the api views."""
-#
-#     def set_Up(self):
-#         """Define the test client and other test variables."""
-#         self.client = APIClient()
-#         self.notes_list = {'name': 'Test Note'}
-#         self.response = self.client.post(
-#             reverse('notes'),
-#             self.notes_list,
-#             format="json")
-#
-#     def test_api_can_create_a_notes(self):
-#         """Test the api has bucket creation capability."""
-#         self.assertEqual(self.response.status_code, status.HTTP_201_CREATED)

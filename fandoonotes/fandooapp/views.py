@@ -197,20 +197,15 @@ def home(request):
 
 
 # to create and display the list of notes
-class notes_list(APIView):
+class NotesList(APIView):
 
-    # generating list of notes
-    def get(self, request):
+    # to get list of notes
+    def get(self, request, trash=None, is_archive=None):
+        notes = Notes.objects.filter(trash=False, is_archive=False)
+        data = NoteSerializer(notes, many=True).data
+        return Response(data, status=200)
 
-        notes = Notes.objects.all()
-        # redis_note = notes['Notes']
-        # RedisMethods.set_Notes_in_Redis(self, 'Notes', redis_note)
-        # note_data = RedisMethods.get_token(self, 'Notes')
-        # print(note_data)
-        data = NoteSerializer(notes, many=True)
-        return Response(data.data, status=200)
-
-    # creating new note
+    # to create new note
     def post(self, request):
         serializer = NoteSerializer(data=request.data)
         try:
@@ -222,22 +217,24 @@ class notes_list(APIView):
             return Response(serializer.data)
 
 
+# performing operations on notes like edit, delete
 class Notedata(APIView):
 
+    # to get particular object
     def get_object(self, id=None):
-        print("asdasd",id)
         a = Notes.objects.get(id=id)
-        print("Data",a)
         return a
-    
+
+    # to get id wise note
     def get(self,request, id=None):
-        data=self.get_object(id)
+        data = self.get_object(id)
         ser = NoteSerializer(data).data
         return Response(ser)
 
+    # editing the particular note
     def put(self, request, id=None):
         data = request.data
-        instance= self.get_object(id)
+        instance = self.get_object(id)
         serializer = NoteSerializer(instance,  data=data)
         try:
             if serializer.is_valid():
@@ -257,7 +254,7 @@ class Notedata(APIView):
                 # UPDATE THE is_deleted
                 instance.is_deleted = True
                 # UPDATE THE is_trashed
-                instance.is_trash = True
+                instance.trash = True
                 # SAVE THE RECORD
                 instance.save()
             # RETURN THE RESPONSE MESSAGE AND CODE
@@ -268,12 +265,12 @@ class Notedata(APIView):
 
 
 # to create the label and list of labels
-class label_list(APIView):
+class LabelList(APIView):
 
     # list of labels
-    def get(self, request):
+    def get(self, request, is_deleted=None):
 
-        labels = Labels.objects.all()
+        labels = Labels.objects.filter(is_deleted=True)
         # print(notes)
         data = LabelSerializer(labels, many=True)
         return Response(data.data)
@@ -293,7 +290,7 @@ class label_list(APIView):
 # performing operations like edit, delete on labels
 class LabelViewDetails(APIView):
 
-    # to get particular label id wise
+    # to get particular object
     def get_object(self, id=None):
         try:
             a = Labels.objects.get(id=id)
@@ -301,17 +298,16 @@ class LabelViewDetails(APIView):
         except Notes.DoesNotExist as e:
             return Response({"error": "Given object not found."}, status=404)
 
+    # to get id wise label
     def get(self, request, id=None):
-        print("sdasdasdasda", id)
         data = self.get_object(id)
-        print("sadadasd", data)
         ser = LabelSerializer(data).data
         return Response(ser)
 
     # editing the label
     def put(self, request, id=None):
         data = request.data
-        instance= self.get_object(id)
+        instance = self.get_object(id)
         serializer = LabelSerializer(instance,  data=data)
         try:
             if serializer.is_valid():
@@ -331,7 +327,7 @@ class LabelViewDetails(APIView):
                 # UPDATE THE is_deleted
                 instance.is_deleted = True
                 # UPDATE THE is_trashed
-                instance.is_trash = True
+                instance.trash = True
                 # SAVE THE RECORD
                 instance.save()
             # RETURN THE RESPONSE MESSAGE AND CODE
@@ -339,3 +335,20 @@ class LabelViewDetails(APIView):
             # ELSE EXCEPT THE ERROR AND SEND THE RESPONSE WITH ERROR MESSAGE
         except Notes.DoesNotExist as e:
             return Response({"Error": "Note Does Not Exist Or Deleted.."}, status=Response.status_code)
+
+
+# listing all the notes which are in trash
+class NoteTrashView(APIView):
+
+    def get(self, request, trash=None):
+        notes = Notes.objects.filter(trash=True)
+        data = NoteSerializer(notes, many=True)
+        return Response(data.data, status=200)
+
+
+# listing all the notes which are archive
+class NoteArchiveview(APIView):
+    def get(self, request, is_archive=None):
+        notes = Notes.objects.filter(is_archive=True)
+        data = NoteSerializer(notes, many=True)
+        return Response(data.data, status=200)

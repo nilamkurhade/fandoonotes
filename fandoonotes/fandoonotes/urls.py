@@ -34,11 +34,10 @@ urlpatterns = [
     url(r'^activate/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
         views.activate, name='activate'),
     url(r'^upload/$', views.s3_upload, name='upload'),
-    url('notes/', views.notes_list.as_view()),
-    # url('notes/', views.pinNote.as_view()),
-    # path('notes/<int:noteid>/', views.NoteDetail.as_view()),
-    url('labels/', views.label_list.as_view()),
-    url('label/<int:id>/', views.LabelViewDetails.as_view()),
-
+    path('notes/', views.NotesList.as_view()),
+    path('labels/', views.LabelList.as_view()),
+    path('label/<int:id>/', views.LabelViewDetails.as_view()),
     path('note/<int:id>/', views.Notedata.as_view()),
+    path('trash/', views.NoteTrashView.as_view()),
+    path('archive/', views.NoteArchiveview.as_view()),
 ]

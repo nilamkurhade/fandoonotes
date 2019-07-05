@@ -11,8 +11,6 @@ class NoteSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-
-
 # serializer class for labels
 class LabelSerializer(serializers.ModelSerializer):
 

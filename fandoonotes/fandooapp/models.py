@@ -6,11 +6,9 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 # Create your models here.
-
-# models for user profile info
-from django.forms import NullBooleanField
 
 
 class UserProfileInfo(models.Model):
@@ -21,6 +19,7 @@ class UserProfileInfo(models.Model):
 
 def __str__(self):
     return self.user.username
+
 
 # model for profile
 class Profile(models.Model):
@@ -39,14 +38,13 @@ def update_user_profile(sender, instance, created, **kwargs):
 class Notes(models.Model):
     title = models.CharField(max_length=30, blank=False)
     discription = models.TextField(max_length=250, blank=True)
-    # created_time = models.DateTimeField(default=datetime.now(), blank=True)
-    is_archieved = models.BooleanField(default=False, blank=True)
+    created_time = models.DateTimeField(default=timezone.now())
+    is_archive = models.BooleanField(default=False, blank=True)
     is_deleted = models.BooleanField(default=False, blank=True)
     color = models.CharField(max_length=20, blank=False)
     image = models.ImageField(upload_to='static/img', blank=True)
     trash = models.BooleanField(default=False, blank=True)
-    # remainder = models.DateTimeField(blank=True)
-    # is_pinned = NullBooleanField()
+    reminder = models.CharField(max_length=50, blank=True)
     labels = models.CharField(max_length=50, blank=False)
 
     def __str__(self):
