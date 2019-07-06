@@ -32,6 +32,9 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
+import pickle
+import redis
+from .s3services import S3services
 
 
 # view for index
@@ -203,6 +206,14 @@ class NotesList(APIView):
     def get(self, request, trash=None, is_archive=None):
         notes = Notes.objects.filter(trash=False, is_archive=False)
         data = NoteSerializer(notes, many=True).data
+        # storing notes in redis cache
+        r = redis.StrictRedis('localhost')
+        mydict = notes
+        p_mydict = pickle.dumps(mydict)
+        r.set('mydict', p_mydict)
+        read_dict = r.get('mydict')
+        yourdict = pickle.loads(read_dict)
+        print("notes in redis cache", yourdict)
         return Response(data, status=200)
 
     # to create new note
@@ -339,7 +350,6 @@ class LabelViewDetails(APIView):
 
 # listing all the notes which are in trash
 class NoteTrashView(APIView):
-
     def get(self, request, trash=None):
         notes = Notes.objects.filter(trash=True)
         data = NoteSerializer(notes, many=True)
@@ -352,3 +362,4 @@ class NoteArchiveview(APIView):
         notes = Notes.objects.filter(is_archive=True)
         data = NoteSerializer(notes, many=True)
         return Response(data.data, status=200)
+

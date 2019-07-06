@@ -21,6 +21,3 @@ class RedisMethods:
         # this method is used to delete data from redis
         r.flushall()
 
-    def set_notes_in_redis(self, key, value):
-        r.set(key, value)
-        print('notes sets in redis')
