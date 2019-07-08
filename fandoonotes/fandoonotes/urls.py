@@ -40,4 +40,5 @@ urlpatterns = [
     path('note/<int:id>/', views.Notedata.as_view()),
     path('trash/', views.NoteTrashView.as_view()),
     path('archive/', views.NoteArchiveview.as_view()),
+    path('reminder/', views.NoteReminderview.as_view()),
 ]

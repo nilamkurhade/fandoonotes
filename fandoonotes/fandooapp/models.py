@@ -44,7 +44,7 @@ class Notes(models.Model):
     color = models.CharField(max_length=20, blank=False)
     image = models.ImageField(upload_to='static/img', blank=True)
     trash = models.BooleanField(default=False, blank=True)
-    reminder = models.DateField()
+    reminder = models.DateField(blank=True, null=True)
     labels = models.CharField(max_length=50, blank=False)
 
     def __str__(self):

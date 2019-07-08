@@ -243,7 +243,7 @@ class Notedata(APIView):
         return Response(ser)
 
     # editing the particular note
-    def put(self, request, id=None):
+    def put(self, request, id=None, formate = None):
         data = request.data
         instance = self.get_object(id)
         serializer = NoteSerializer(instance,  data=data)
@@ -363,3 +363,10 @@ class NoteArchiveview(APIView):
         data = NoteSerializer(notes, many=True)
         return Response(data.data, status=200)
 
+                                                                                                                                                                                                                                                                                                                                                                                                        
+# listing all the notes which are reminder
+class NoteReminderview(APIView):
+    def get(self, request, reminder=None):
+        notes = Notes.objects.exclude(reminder__isnull=True)
+        data = NoteSerializer(notes, many=True)
+        return Response(data.data, status=200)
