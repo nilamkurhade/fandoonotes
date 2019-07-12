@@ -38,19 +38,20 @@ def update_user_profile(sender, instance, created, **kwargs):
 class Notes(models.Model):
     title = models.CharField(max_length=30, blank=False)
     discription = models.TextField(max_length=250, blank=True)
-    created_time = models.DateTimeField(default=timezone.now())
     is_archive = models.BooleanField(default=False, blank=True)
     is_deleted = models.BooleanField(default=False, blank=True)
     color = models.CharField(max_length=20, blank=False)
     image = models.ImageField(upload_to='static/img', blank=True)
     trash = models.BooleanField(default=False, blank=True)
-    reminder = models.DateField(blank=True, null=True)
     labels = models.CharField(max_length=50, blank=False)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, default=1, related_name='owner')
 
     def __str__(self):
         return self.title
 
 
+# model for label
 class Labels(models.Model):
     title = models.CharField(max_length=20, blank=False)
-    is_deleted = models.BooleanField(default=False, blank=True)
+    is_deleted= models.BooleanField(default=False, blank=True)
+

@@ -17,6 +17,8 @@ from django.contrib import admin
 from django.urls import path
 from django.conf.urls import url, include
 from fandooapp import views
+from django.conf.urls import url
+from rest_framework_swagger.views import get_swagger_view
 
 # urls
 
@@ -34,11 +36,13 @@ urlpatterns = [
     url(r'^activate/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
         views.activate, name='activate'),
     url(r'^upload/$', views.s3_upload, name='upload'),
+    url(r'^swagger/', get_swagger_view(title="API Docs"), name="Docs"),
     path('notes/', views.NotesList.as_view()),
     path('labels/', views.LabelList.as_view()),
     path('label/<int:id>/', views.LabelViewDetails.as_view()),
     path('note/<int:id>/', views.Notedata.as_view()),
     path('trash/', views.NoteTrashView.as_view()),
     path('archive/', views.NoteArchiveview.as_view()),
-    path('reminder/', views.NoteReminderview.as_view()),
+
+
 ]

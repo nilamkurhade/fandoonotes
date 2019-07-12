@@ -5,6 +5,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 import jwt
+from django.utils.decorators import method_decorator
 from requests import Response
 from rest_framework import serializers, status
 
@@ -23,7 +24,6 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
 from .service import RedisMethods
-from django.views.decorators.cache import cache_page
 from .models import Notes
 from .models import Labels
 from .serializer import NoteSerializer
@@ -34,7 +34,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 import pickle
 import redis
-from .s3services import S3services
+from .decorators import api_login_required
 
 
 # view for index
@@ -48,25 +48,22 @@ def special(request):
 
 
 # view for logout
+@csrf_exempt
 @login_required
 def user_logout(request):
     logout(request)
+    RedisMethods.flush(self)
     return HttpResponseRedirect(reverse('index'))
 
 
 # view for login and and after login token generation
 @csrf_exempt
-@cache_page(60 * 15)
 def user_login(request):
     res =[]
     try:
         if request.method == 'POST':
             username = request.POST.get('username')
             password = request.POST.get('password')
-            # if username is None:
-            #     raise
-            # if password is None:
-            #     raise
             user = authenticate(username=username, password=password)
             if user:
                 if user.is_active:
@@ -75,10 +72,11 @@ def user_login(request):
                         'id': user.id,
                         'email': user.email,
                     }
-                    jwt_token = {'token': jwt.encode(payload, "SECRET_KEY")}
-                    j_token = jwt_token['token']
+                    jwt_token = jwt.encode(payload, 'secret', 'HS256').decode('utf-8')
                     print("11111111111111", jwt_token)
-                    RedisMethods.set_token(self, 'token', j_token)
+                    # decoded_token = jwt.decode(jwt_token, 'secret', algorithms=['HS256'])
+                    # print("decode token ", decoded_token)
+                    RedisMethods.set_token(self, 'token', jwt_token)
                     restoken = RedisMethods.get_token(self, 'token')
                     print("token in redis", restoken)
                     login(request, user)
@@ -88,6 +86,7 @@ def user_login(request):
                             'message': res,
                             'username': user.username,
                             'Password': user.password,
+                            'Email': user.email,
                             'status_code': 200
 
                     }
@@ -150,7 +149,7 @@ def activate(request, uidb64, token):
     if user is not None and account_activation_token.check_token(user, token):
         user.is_active = True
         user.save()
-        login(request, user)
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         return HttpResponse('Thank you for your email confirmation. Now you can login your account.')
     else:
         return HttpResponse('Activation link is invalid!')
@@ -180,7 +179,7 @@ def s3_upload(request):
                 status_code = 400
                 return JsonResponse({'message': message, 'status': status_code})
             else:
-                file_name = 'nature.jpg'
+                file_name = 'test55.jpg'
                 s3_client = boto3.client('s3')
                 s3_client.upload_fileobj(uploaded_file, 'fandoo-static', Key=file_name)
                 message = "Image successfully uploaded"
@@ -200,32 +199,54 @@ def home(request):
 
 
 # to create and display the list of notes
+
 class NotesList(APIView):
 
     # to get list of notes
-    def get(self, request, trash=None, is_archive=None):
-        notes = Notes.objects.filter(trash=False, is_archive=False)
-        data = NoteSerializer(notes, many=True).data
-        # storing notes in redis cache
-        r = redis.StrictRedis('localhost')
-        mydict = notes
-        p_mydict = pickle.dumps(mydict)
-        r.set('mydict', p_mydict)
-        read_dict = r.get('mydict')
-        yourdict = pickle.loads(read_dict)
-        print("notes in redis cache", yourdict)
-        return Response(data, status=200)
+    @method_decorator(api_login_required)
+    def get(self, request):
+        try:
+            restoken = RedisMethods.get_token(self, 'token')
+            decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
+            print("decode token ", decoded_token)
+            dec_id = decoded_token.get('id')
+            print("user id", dec_id)
+            user = User.objects.get(id=dec_id)
+            print("username", user)
+            notes = Notes.objects.filter(created_by=user, trash=False, is_deleted=False, is_archive=False)
+            if notes is None:
+                return Response({"message": "Notes not available"}, status=404)
+            else:
+                data = NoteSerializer(notes, many=True).data
+                # storing notes in redis cache
+                r = redis.StrictRedis('localhost')
+                mydict = notes
+                p_mydict = pickle.dumps(mydict)
+                r.set('mydict', p_mydict)
+                read_dict = r.get('mydict')
+                yourdict = pickle.loads(read_dict)
+                print("notes in redis cache", yourdict)
+                return Response(data, status=200)
+        except Notes.DoesNotExist as e:
+            return Response({"error": "Notes not available"}, status=404)
 
     # to create new note
+    @method_decorator(api_login_required)
     def post(self, request):
+        restoken = RedisMethods.get_token(self, 'token')
+        decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
+        print("decode token ", decoded_token)
+        dec_id = decoded_token.get('id')
+        print("user id", dec_id)
+        user = User.objects.get(id=dec_id)
+        print("username", user)
         serializer = NoteSerializer(data=request.data)
         try:
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(created_by=user)
         except serializers.ValidationError:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response(serializer.data)
+        return Response(serializer.data)
 
 
 # performing operations on notes like edit, delete
@@ -233,20 +254,34 @@ class Notedata(APIView):
 
     # to get particular object
     def get_object(self, id=None):
-        a = Notes.objects.get(id=id)
-        return a
+        obj = Notes.objects.get(id=id)
+        return obj
 
     # to get id wise note
-    def get(self,request, id=None):
-        data = self.get_object(id)
-        ser = NoteSerializer(data).data
-        return Response(ser)
+    @method_decorator(api_login_required)
+    def get(self, request, id=None):
+        try:
+            data = self.get_object(id)
+            if data is None:
+                return JsonResponse({"error": "note not available"}, status=Response.status_code)
+            else:
+                serializer = NoteSerializer(data).data
+                return JsonResponse(serializer)
+        except Notes.DoesNotExist as e:
+            return JsonResponse({"Error": "Note not available of this id"}, status=Response.status_code)
 
     # editing the particular note
-    def put(self, request, id=None, formate = None):
-        data = request.data
-        instance = self.get_object(id)
-        serializer = NoteSerializer(instance,  data=data)
+    @method_decorator(api_login_required)
+    def put(self, request, id=None, formate=None):
+        try:
+            data = request.data
+            instance = self.get_object(id)
+            if data or instance is None:
+                return JsonResponse({"error": "to edit data pass proper data"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                serializer = NoteSerializer(instance, data=data)
+        except Notes.DoesNotExist as e:
+            return JsonResponse({"Error": "Note not available of this id to edit"}, status=Response.status_code)
         try:
             if serializer.is_valid():
                 serializer.save()
@@ -255,6 +290,7 @@ class Notedata(APIView):
         return JsonResponse(serializer.data, status=200)
 
     # deleting the note
+    @method_decorator(api_login_required)
     def delete(self, request, id):
         try:
             # GET THE OBJECT OF THAT note_od BY PASSING note_id TO THE get_object() FUNCTION
@@ -272,30 +308,36 @@ class Notedata(APIView):
             return Response({"Message": "Note Deleted Successfully And Added To The Trash."}, status=200)
             # ELSE EXCEPT THE ERROR AND SEND THE RESPONSE WITH ERROR MESSAGE
         except Notes.DoesNotExist as e:
-            return Response({"Error": "Note Does Not Exist Or Deleted.."}, status=Response.status_code)
+            return JsonResponse({"Error": "Note Does Not Exist Or Deleted.."}, status=Response.status_code)
 
 
 # to create the label and list of labels
 class LabelList(APIView):
 
     # list of labels
+    @method_decorator(api_login_required)
     def get(self, request, is_deleted=None):
-
-        labels = Labels.objects.filter(is_deleted=True)
-        # print(notes)
-        data = LabelSerializer(labels, many=True)
-        return Response(data.data)
+        try:
+            labels = Labels.objects.filter(is_deleted=True)
+            if labels is None:
+                return Response({"message": "labels not available"}, status=404)
+            else:
+                data = LabelSerializer(labels, many=True)
+                return Response(data.data)
+        except Notes.DoesNotExist as e:
+            return JsonResponse({"error": "labels not available."}, status=404)
 
     # creating the new label
+    @method_decorator(api_login_required)
     def post(self, request):
         serializer = LabelSerializer(data=request.data)
         try:
             if serializer.is_valid():
                 serializer.save()
         except serializers.ValidationError:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response(serializer.data)
+            return JsonResponse(serializer.data)
 
 
 # performing operations like edit, delete on labels
@@ -304,22 +346,31 @@ class LabelViewDetails(APIView):
     # to get particular object
     def get_object(self, id=None):
         try:
-            a = Labels.objects.get(id=id)
-            return a
+            obj = Labels.objects.get(id=id)
+            return obj
         except Notes.DoesNotExist as e:
-            return Response({"error": "Given object not found."}, status=404)
+            return JsonResponse({"error": "Given object not found."}, status=404)
 
     # to get id wise label
     def get(self, request, id=None):
-        data = self.get_object(id)
-        ser = LabelSerializer(data).data
-        return Response(ser)
+        try:
+            data = self.get_object(id)
+            ser = LabelSerializer(data).data
+            return Response(ser)
+        except Notes.DoesNotExist as e:
+            return JsonResponse({"Error": "Note not available of this id"}, status=Response.status_code)
 
     # editing the label
     def put(self, request, id=None):
-        data = request.data
-        instance = self.get_object(id)
-        serializer = LabelSerializer(instance,  data=data)
+        try:
+            data = request.data
+            instance = self.get_object(id)
+            if data or instance is None:
+                return JsonResponse({"error": "to edit data pass proper data"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                serializer = LabelSerializer(instance, data=data)
+        except Notes.DoesNotExist as e:
+            return JsonResponse({"Error": "Note not available of this id to edit"}, status=Response.status_code)
         try:
             if serializer.is_valid():
                 serializer.save()
@@ -348,25 +399,45 @@ class LabelViewDetails(APIView):
             return Response({"Error": "Note Does Not Exist Or Deleted.."}, status=Response.status_code)
 
 
-# listing all the notes which are in trash
 class NoteTrashView(APIView):
-    def get(self, request, trash=None):
-        notes = Notes.objects.filter(trash=True)
-        data = NoteSerializer(notes, many=True)
-        return Response(data.data, status=200)
+    # listing all the notes which are in trash
+    def get(self, request):
+        try:
+            restoken = RedisMethods.get_token(self, 'token')
+            decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
+            print("decode token ", decoded_token)
+            dec_id = decoded_token.get('id')
+            print("user id", dec_id)
+            user = User.objects.get(id=dec_id)
+            print("username", user)
+            trash_notes = Notes.objects.filter(created_by=user, trash=True)
+            if trash_notes is None:
+                return JsonResponse({"error": "notes not available"}, status=404)
+            else:
+                data = NoteSerializer(trash_notes, many=True)
+                return Response(data.data, status=200)
+        except Notes.DoesNotExist as e:
+            return JsonResponse({"error": "Notes not available in trash"}, status=404)
 
 
-# listing all the notes which are archive
 class NoteArchiveview(APIView):
-    def get(self, request, is_archive=None):
-        notes = Notes.objects.filter(is_archive=True)
-        data = NoteSerializer(notes, many=True)
-        return Response(data.data, status=200)
+    # listing all the notes which are archive
+    def get(self, request):
+        try:
+            restoken = RedisMethods.get_token(self, 'token')
+            decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
+            print("decode token ", decoded_token)
+            dec_id = decoded_token.get('id')
+            print("user id", dec_id)
+            user = User.objects.get(id=dec_id)
+            print("username", user)
+            archive_notes = Notes.objects.filter(created_by=user, is_archive=True)
+            if archive_notes is None:
+                return JsonResponse({"error": "notes not available in archive"}, status=404)
+            else:
+                data = NoteSerializer(archive_notes, many=True)
+            return Response(data.data, status=200)
+        except Notes.DoesNotExist as e:
+            return JsonResponse({"error": "Notes not available in Archive"}, status=404)
 
-                                                                                                                                                                                                                                                                                                                                                                                                        
-# listing all the notes which are reminder
-class NoteReminderview(APIView):
-    def get(self, request, reminder=None):
-        notes = Notes.objects.exclude(reminder__isnull=True)
-        data = NoteSerializer(notes, many=True)
-        return Response(data.data, status=200)
+

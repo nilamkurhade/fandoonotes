@@ -1,15 +1,25 @@
-from django.http import HttpResponseRedirect, HttpResponse
-from .views import user_login
+from django.http import HttpResponseRedirect, HttpResponse, request
+from self import self
+import jwt
+from django.contrib.auth.models import User
+from .service import RedisMethods
+
+
 # decorators for login
+def api_login_required(method):
 
+    def token_verification(ref):
 
-def myuser_login_required(f):
-    def wrap(request, *args, **kwargs):
-        # this check the session if userid key exist, if not it will redirect to login page
-        if 'username' not in request.session.keys():
-            return HttpResponseRedirect("/fandooapp/user_login")
-        return f(request, *args, **kwargs)
+        restoken = RedisMethods.get_token(self, 'token')
+        decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
+        print("decode token ", decoded_token)
+        dec_id = decoded_token.get('id')
+        print("user id", dec_id)
+        user = User.objects.get(id=dec_id)
+        print("username", user)
+        if dec_id:
+            return method(ref)
+        else:
+            raise PermissionError
 
-    wrap.__doc__ = f.__doc__
-    wrap.__name__ = f.__name__
-    return wrap
+    return token_verification

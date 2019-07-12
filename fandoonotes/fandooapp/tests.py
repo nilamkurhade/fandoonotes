@@ -87,10 +87,12 @@ class EntryTest(TestCase):
         response = self.client.get('/labels/', format='json')
         self.assertValidJsonResponse(response)
 
+    # test case fro trash view
     def test_trash_api(self):
         response = self.client.get('/trash/')
         self.assertEqual(response.status_code, 200)
 
+    # rest case for archive view
     def test_archive_api(self):
         response = self.client.get('/archive/')
         self.assertEqual(response.status_code, 200)
