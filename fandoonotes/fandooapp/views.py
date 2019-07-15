@@ -35,6 +35,10 @@ from rest_framework.response import Response
 import pickle
 import redis
 from .decorators import api_login_required
+import logging
+
+# This retrieves a Python logging instance (or creates it)
+logger = logging.getLogger(__name__)
 
 
 # view for index
@@ -74,8 +78,6 @@ def user_login(request):
                     }
                     jwt_token = jwt.encode(payload, 'secret', 'HS256').decode('utf-8')
                     print("11111111111111", jwt_token)
-                    # decoded_token = jwt.decode(jwt_token, 'secret', algorithms=['HS256'])
-                    # print("decode token ", decoded_token)
                     RedisMethods.set_token(self, 'token', jwt_token)
                     restoken = RedisMethods.get_token(self, 'token')
                     print("token in redis", restoken)
@@ -176,8 +178,9 @@ def s3_upload(request):
             uploaded_file = request.FILES.get('document')
             if uploaded_file is None:
                 message = "Empty file can not be uploaded"
-                status_code = 400
-                return JsonResponse({'message': message, 'status': status_code})
+                # status_code = 400
+                # return JsonResponse({'message': message, 'status': status_code})
+                logger.error(message)
             else:
                 file_name = 'test55.jpg'
                 s3_client = boto3.client('s3')
@@ -215,7 +218,9 @@ class NotesList(APIView):
             print("username", user)
             notes = Notes.objects.filter(created_by=user, trash=False, is_deleted=False, is_archive=False)
             if notes is None:
-                return Response({"message": "Notes not available"}, status=404)
+                message = "Notes not available"
+                logger.error(message)
+
             else:
                 data = NoteSerializer(notes, many=True).data
                 # storing notes in redis cache
@@ -263,7 +268,8 @@ class Notedata(APIView):
         try:
             data = self.get_object(id)
             if data is None:
-                return JsonResponse({"error": "note not available"}, status=Response.status_code)
+                messsage = "note not available"
+                logger.error(messsage)
             else:
                 serializer = NoteSerializer(data).data
                 return JsonResponse(serializer)
@@ -277,7 +283,8 @@ class Notedata(APIView):
             data = request.data
             instance = self.get_object(id)
             if data or instance is None:
-                return JsonResponse({"error": "to edit data pass proper data"}, status=status.HTTP_400_BAD_REQUEST)
+                error = "to edit data pass proper data"
+                logger.error(error)
             else:
                 serializer = NoteSerializer(instance, data=data)
         except Notes.DoesNotExist as e:
@@ -320,7 +327,8 @@ class LabelList(APIView):
         try:
             labels = Labels.objects.filter(is_deleted=True)
             if labels is None:
-                return Response({"message": "labels not available"}, status=404)
+                message =  "labels not available"
+                logger.error(message)
             else:
                 data = LabelSerializer(labels, many=True)
                 return Response(data.data)
@@ -352,6 +360,7 @@ class LabelViewDetails(APIView):
             return JsonResponse({"error": "Given object not found."}, status=404)
 
     # to get id wise label
+    @method_decorator(api_login_required)
     def get(self, request, id=None):
         try:
             data = self.get_object(id)
@@ -366,7 +375,8 @@ class LabelViewDetails(APIView):
             data = request.data
             instance = self.get_object(id)
             if data or instance is None:
-                return JsonResponse({"error": "to edit data pass proper data"}, status=status.HTTP_400_BAD_REQUEST)
+                error = "to edit data pass proper data"
+                logger.error(error)
             else:
                 serializer = LabelSerializer(instance, data=data)
         except Notes.DoesNotExist as e:
@@ -379,6 +389,7 @@ class LabelViewDetails(APIView):
         return JsonResponse(serializer.data, status=200)
 
     # deleting the label
+    @method_decorator(api_login_required)
     def delete(self, request, id):
         try:
             # GET THE OBJECT OF THAT note_od BY PASSING note_id TO THE get_object() FUNCTION
@@ -401,6 +412,7 @@ class LabelViewDetails(APIView):
 
 class NoteTrashView(APIView):
     # listing all the notes which are in trash
+    @method_decorator(api_login_required)
     def get(self, request):
         try:
             restoken = RedisMethods.get_token(self, 'token')
@@ -412,7 +424,8 @@ class NoteTrashView(APIView):
             print("username", user)
             trash_notes = Notes.objects.filter(created_by=user, trash=True)
             if trash_notes is None:
-                return JsonResponse({"error": "notes not available"}, status=404)
+                error = "notes not available"
+                logger.error(error)
             else:
                 data = NoteSerializer(trash_notes, many=True)
                 return Response(data.data, status=200)
@@ -422,6 +435,7 @@ class NoteTrashView(APIView):
 
 class NoteArchiveview(APIView):
     # listing all the notes which are archive
+    @method_decorator(api_login_required)
     def get(self, request):
         try:
             restoken = RedisMethods.get_token(self, 'token')
@@ -433,11 +447,13 @@ class NoteArchiveview(APIView):
             print("username", user)
             archive_notes = Notes.objects.filter(created_by=user, is_archive=True)
             if archive_notes is None:
-                return JsonResponse({"error": "notes not available in archive"}, status=404)
+                error = "notes not available in archive"
+                logger.error(error)
             else:
                 data = NoteSerializer(archive_notes, many=True)
             return Response(data.data, status=200)
         except Notes.DoesNotExist as e:
-            return JsonResponse({"error": "Notes not available in Archive"}, status=404)
-
+            error = "Notes not available in Archive"
+            # return JsonResponse({"error": "Notes not available in Archive"}, status=404)
+            logger.exception(error)
 
