@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'fandooapp',
     'social_django',
+    'django_elasticsearch_dsl',
+    'django_elasticsearch_dsl_drf',
 
 ]
 
@@ -205,6 +207,14 @@ SOCIAL_AUTH_RAISE_EXCEPTIONS = False
 SOCIAL_AUTH_FACEBOOK_KEY = os.getenv("SOCIAL_AUTH_FACEBOOK_KEY")
 SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv("SOCIAL_AUTH_FACEBOOK_SECRET")
 
+# Logger
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+logging.warning('This is a Logger Warning')
 
-logging.basicConfig(format='%(process)d-%(levelname)s-%(message)s')
-logging.warning('This is a Warning')
+
+# Elastic search
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'elasticsearch:9200'
+    },
+}

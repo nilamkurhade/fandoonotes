@@ -19,6 +19,14 @@ from django.conf.urls import url, include
 from fandooapp import views
 from django.conf.urls import url
 from rest_framework_swagger.views import get_swagger_view
+from rest_framework import routers
+
+
+app_name = 'articles'
+
+router = routers.DefaultRouter()
+router.register(r'^search', views.NotesDocumentViewSet, basename='search/')
+
 
 # urls
 
@@ -43,6 +51,6 @@ urlpatterns = [
     path('note/<int:id>/', views.Notedata.as_view()),
     path('trash/', views.NoteTrashView.as_view()),
     path('archive/', views.NoteArchiveview.as_view()),
-
+    path('', include(router.urls)),
 
 ]

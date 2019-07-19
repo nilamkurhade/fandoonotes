@@ -1,4 +1,5 @@
-import json
+from .document import NotesDocument
+from .serializer import NotesDocumentSerializer
 import self as self
 from django.contrib.auth import login, logout
 from django.http import HttpResponseRedirect, JsonResponse
@@ -36,6 +37,22 @@ import pickle
 import redis
 from .decorators import api_login_required
 import logging
+from rest_framework.response import Response
+
+from django_elasticsearch_dsl_drf.constants import (
+    LOOKUP_FILTER_RANGE,
+    LOOKUP_QUERY_IN,
+    LOOKUP_QUERY_GT,
+    LOOKUP_QUERY_GTE,
+    LOOKUP_QUERY_LT,
+    LOOKUP_QUERY_LTE,
+)
+from django_elasticsearch_dsl_drf.filter_backends import (
+    FilteringFilterBackend,
+    OrderingFilterBackend,
+    DefaultOrderingFilterBackend,
+    CompoundSearchFilterBackend, FunctionalSuggesterFilterBackend)
+from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 
 # This retrieves a Python logging instance (or creates it)
 logger = logging.getLogger(__name__)
@@ -68,6 +85,10 @@ def user_login(request):
         if request.method == 'POST':
             username = request.POST.get('username')
             password = request.POST.get('password')
+            if username is None:
+                return Response({"error": "username not available"}, status=404)
+            if password is None:
+                return Response({"error": "password not available"}, status=404)
             user = authenticate(username=username, password=password)
             if user:
                 if user.is_active:
@@ -78,6 +99,7 @@ def user_login(request):
                     }
                     jwt_token = jwt.encode(payload, 'secret', 'HS256').decode('utf-8')
                     print("11111111111111", jwt_token)
+                    # storing token into redis cache
                     RedisMethods.set_token(self, 'token', jwt_token)
                     restoken = RedisMethods.get_token(self, 'token')
                     print("token in redis", restoken)
@@ -169,6 +191,7 @@ def email(request):
 
 # to upload images in s3 bucket
 @csrf_exempt
+@method_decorator(api_login_required)
 def s3_upload(request):
     try:
         message = None
@@ -211,11 +234,9 @@ class NotesList(APIView):
         try:
             restoken = RedisMethods.get_token(self, 'token')
             decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
-            print("decode token ", decoded_token)
             dec_id = decoded_token.get('id')
-            print("user id", dec_id)
             user = User.objects.get(id=dec_id)
-            print("username", user)
+            # getting the of particular logged in user
             notes = Notes.objects.filter(created_by=user, trash=False, is_deleted=False, is_archive=False)
             if notes is None:
                 message = "Notes not available"
@@ -263,32 +284,21 @@ class Notedata(APIView):
         return obj
 
     # to get id wise note
-    @method_decorator(api_login_required)
+
     def get(self, request, id=None):
         try:
             data = self.get_object(id)
-            if data is None:
-                messsage = "note not available"
-                logger.error(messsage)
-            else:
-                serializer = NoteSerializer(data).data
-                return JsonResponse(serializer)
+            serializer = NoteSerializer(data).data
+            return Response(serializer)
         except Notes.DoesNotExist as e:
             return JsonResponse({"Error": "Note not available of this id"}, status=Response.status_code)
 
     # editing the particular note
-    @method_decorator(api_login_required)
     def put(self, request, id=None, formate=None):
-        try:
-            data = request.data
-            instance = self.get_object(id)
-            if data or instance is None:
-                error = "to edit data pass proper data"
-                logger.error(error)
-            else:
-                serializer = NoteSerializer(instance, data=data)
-        except Notes.DoesNotExist as e:
-            return JsonResponse({"Error": "Note not available of this id to edit"}, status=Response.status_code)
+
+        data = request.data
+        instance = self.get_object(id)
+        serializer = NoteSerializer(instance, data=data)
         try:
             if serializer.is_valid():
                 serializer.save()
@@ -327,7 +337,7 @@ class LabelList(APIView):
         try:
             labels = Labels.objects.filter(is_deleted=True)
             if labels is None:
-                message =  "labels not available"
+                message = "labels not available"
                 logger.error(message)
             else:
                 data = LabelSerializer(labels, many=True)
@@ -360,14 +370,14 @@ class LabelViewDetails(APIView):
             return JsonResponse({"error": "Given object not found."}, status=404)
 
     # to get id wise label
-    @method_decorator(api_login_required)
+
     def get(self, request, id=None):
         try:
             data = self.get_object(id)
             ser = LabelSerializer(data).data
             return Response(ser)
         except Notes.DoesNotExist as e:
-            return JsonResponse({"Error": "Note not available of this id"}, status=Response.status_code)
+            return JsonResponse({"Error": "label not available of this id"}, status=Response.status_code)
 
     # editing the label
     def put(self, request, id=None):
@@ -380,7 +390,7 @@ class LabelViewDetails(APIView):
             else:
                 serializer = LabelSerializer(instance, data=data)
         except Notes.DoesNotExist as e:
-            return JsonResponse({"Error": "Note not available of this id to edit"}, status=Response.status_code)
+            return JsonResponse({"Error": "label not available of this id to edit"}, status=Response.status_code)
         try:
             if serializer.is_valid():
                 serializer.save()
@@ -404,10 +414,10 @@ class LabelViewDetails(APIView):
                 # SAVE THE RECORD
                 instance.save()
             # RETURN THE RESPONSE MESSAGE AND CODE
-            return Response({"Message": "Note Deleted Successfully And Added To The Trash."}, status=200)
+            return Response({"Message": "label Deleted Successfully And Added To The Trash."}, status=200)
             # ELSE EXCEPT THE ERROR AND SEND THE RESPONSE WITH ERROR MESSAGE
         except Notes.DoesNotExist as e:
-            return Response({"Error": "Note Does Not Exist Or Deleted.."}, status=Response.status_code)
+            return Response({"Error": "label Does Not Exist Or Deleted.."}, status=Response.status_code)
 
 
 class NoteTrashView(APIView):
@@ -425,6 +435,7 @@ class NoteTrashView(APIView):
             trash_notes = Notes.objects.filter(created_by=user, trash=True)
             if trash_notes is None:
                 error = "notes not available"
+                # displaying error message through logger
                 logger.error(error)
             else:
                 data = NoteSerializer(trash_notes, many=True)
@@ -448,6 +459,7 @@ class NoteArchiveview(APIView):
             archive_notes = Notes.objects.filter(created_by=user, is_archive=True)
             if archive_notes is None:
                 error = "notes not available in archive"
+                # displaying error message through logger
                 logger.error(error)
             else:
                 data = NoteSerializer(archive_notes, many=True)
@@ -457,3 +469,59 @@ class NoteArchiveview(APIView):
             # return JsonResponse({"error": "Notes not available in Archive"}, status=404)
             logger.exception(error)
 
+
+# For note document view to search data
+class NotesDocumentViewSet(DocumentViewSet):
+    document = NotesDocument
+    serializer_class = NotesDocumentSerializer
+    lookup_field = 'id'
+    filter_backends = [
+        FilteringFilterBackend,
+        OrderingFilterBackend,
+        DefaultOrderingFilterBackend,
+        CompoundSearchFilterBackend,
+        FunctionalSuggesterFilterBackend
+    ]
+
+    # search in all fields in one request
+    search_fields = (
+        'title',
+        'discription',
+        'color',
+    )
+
+    # List of filter fields
+    filter_fields = {
+        'id': {
+            'field': 'id',
+            'lookups': [
+                # to set the extent search,
+                LOOKUP_FILTER_RANGE,
+                LOOKUP_QUERY_IN,
+                # to search elements greater than the given value
+                LOOKUP_QUERY_GT,
+                # to search for the elements equal and greater than the given value
+                LOOKUP_QUERY_GTE,
+                # to search for the elements lesser than the given value
+                LOOKUP_QUERY_LT,
+                # to search for the elements equal and lesser than the given value.
+                LOOKUP_QUERY_LTE,
+            ],
+        },
+        'title': 'title.raw',
+        'discription': 'discription.raw',
+        'color': 'color.raw',
+    }
+
+    # set ordering fields
+    ordering_fields = {
+        'title': 'title.raw',
+        'discription': 'discription.raw',
+        'color': 'color.raw',
+
+    }
+
+    functional_suggester_fields = {
+        'title': 'title.raw',
+        'discription': 'discription.raw',
+    }
