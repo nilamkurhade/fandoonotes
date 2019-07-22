@@ -19,7 +19,7 @@ def api_login_required(method):
         user = User.objects.get(id=decoded_id)
         print("username", user)
         # checking the decoded token id into database
-        if decoded_id:
+        if user:
             # if token presents in database then only return response
             return method(ref)
         else:

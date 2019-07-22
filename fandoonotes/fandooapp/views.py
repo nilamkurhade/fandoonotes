@@ -106,7 +106,7 @@ def user_login(request):
                     login(request, user)
                     message = "you have successfully logged in"
                     res = message
-                    result ={
+                    result = {
                             'message': res,
                             'username': user.username,
                             'Password': user.password,
@@ -307,7 +307,6 @@ class Notedata(APIView):
         return JsonResponse(serializer.data, status=200)
 
     # deleting the note
-    @method_decorator(api_login_required)
     def delete(self, request, id):
         try:
             # GET THE OBJECT OF THAT note_od BY PASSING note_id TO THE get_object() FUNCTION
@@ -420,6 +419,7 @@ class LabelViewDetails(APIView):
             return Response({"Error": "label Does Not Exist Or Deleted.."}, status=Response.status_code)
 
 
+# listing all the notes which are in trash
 class NoteTrashView(APIView):
     # listing all the notes which are in trash
     @method_decorator(api_login_required)
@@ -444,6 +444,7 @@ class NoteTrashView(APIView):
             return JsonResponse({"error": "Notes not available in trash"}, status=404)
 
 
+# listing all the notes which are archive
 class NoteArchiveview(APIView):
     # listing all the notes which are archive
     @method_decorator(api_login_required)
@@ -470,7 +471,7 @@ class NoteArchiveview(APIView):
             logger.exception(error)
 
 
-# For note document view to search data
+# view to search notes data
 class NotesDocumentViewSet(DocumentViewSet):
     document = NotesDocument
     serializer_class = NotesDocumentSerializer

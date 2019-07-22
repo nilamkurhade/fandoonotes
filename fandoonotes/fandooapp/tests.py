@@ -3,12 +3,10 @@ from __future__ import unicode_literals
 import unittest
 from django.test import TestCase
 from django.utils.decorators import method_decorator
-from . models import Notes
+from . models import Notes,Labels
 from django.contrib.auth.models import User
-from .decorators import api_login_required
 from django.urls import reverse
 from django.test.client import Client
-from .views import *
 
 
 # Testing the urls
@@ -25,9 +23,23 @@ class LoginTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+# testing models
+class NoteModelTest(TestCase):
 
-    if __name__ == '__main__':
-        unittest.main()
+    def test_string_representation_for_Notes_models(self):
+        entry = Notes(title="My entry title")
+        self.assertEqual(str(entry), entry.title)
+
+    def test_string_representation_for_labels_models(self):
+        entry = Labels(title="My entry title")
+        self.assertEqual(str(entry), entry.title)
+
+
+class ProjectTests(TestCase):
+
+    def test_homepage(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
 
 
 class SimpleTest(unittest.TestCase):
@@ -37,8 +49,6 @@ class SimpleTest(unittest.TestCase):
 
 
 # Testing the api
-
-
 class EntryTest(TestCase):
 
     def test_details(self):
@@ -60,20 +70,5 @@ class EntryTest(TestCase):
     def test_uploads3_api(self):
         # Issue a get request
         response = self.client.get('/upload/')
-        # check that the response is 200 OK.
-        self.assertEqual(response.status_code, 200)
-
-    @method_decorator(api_login_required)
-    def test_notes_api(self, request):
-        # Issue a get request
-        response = self.client.get('/notes/')
-        # check that the response is 200 OK.
-        self.assertEqual(response.status_code, 200)
-
-    @method_decorator(api_login_required)
-    def test_labels_api(self):
-
-        # Issue a get request
-        response = self.client.get('/labels/')
         # check that the response is 200 OK.
         self.assertEqual(response.status_code, 200)

@@ -33,4 +33,7 @@ class S3services:
         for bucket in response['Buckets']:
             print(f'  {bucket["Name"]}')
 
-
+    def delete_bucket(self):
+        response = boto3.client.delete_bucket(
+            Bucket='fandoo-static'
+        )
