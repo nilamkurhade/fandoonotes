@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import unittest
 from django.test import TestCase
 from django.utils.decorators import method_decorator
-from . models import Notes,Labels
+from . models import Notes, Labels
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.test.client import Client
@@ -12,12 +12,11 @@ from django.test.client import Client
 # Testing the urls
 
 class LoginTestCase(unittest.TestCase):
-    def setUp(self):
+    def setup(self):
         self.client = Client()
         self.user = User.objects.create_user('nilam', 'nilammore820@gmail.com', 'admin@1234')
-        self.notes = Notes.objects.create_note('testcase note', 'test case', 'blue', 'test label')
 
-    def testLogin(self):
+    def test_login(self):
         self.client.login(username='nilam', password='admin@1234')
         response = self.client.get(reverse('index'))
         self.assertEqual(response.status_code, 200)
@@ -26,12 +25,12 @@ class LoginTestCase(unittest.TestCase):
 # testing models
 class NoteModelTest(TestCase):
 
-    def test_string_representation_for_Notes_models(self):
-        entry = Notes(title="My entry title")
+    def test_string_representation_for_notes_models(self):
+        entry = Notes(title="test title")
         self.assertEqual(str(entry), entry.title)
 
     def test_string_representation_for_labels_models(self):
-        entry = Labels(title="My entry title")
+        entry = Labels(title="test title")
         self.assertEqual(str(entry), entry.title)
 
 
@@ -43,7 +42,7 @@ class ProjectTests(TestCase):
 
 
 class SimpleTest(unittest.TestCase):
-    def SetUp(self):
+    def setup(self):
         # Every test needs a client
         self.client = Client()
 
@@ -72,3 +71,17 @@ class EntryTest(TestCase):
         response = self.client.get('/upload/')
         # check that the response is 200 OK.
         self.assertEqual(response.status_code, 200)
+
+    def test_notes(self):
+        # Issue a get request
+        response = self.client.get('/notes/')
+        # check that the response is 200 OK.
+        self.assertEqual(response.status_code, 200)
+
+    def test_labels(self):
+        # Issue a get request
+        response = self.client.get('/labels/')
+        # check that the response is 200 OK.
+        self.assertEqual(response.status_code, 200)
+
+    

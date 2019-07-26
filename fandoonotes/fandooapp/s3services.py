@@ -8,6 +8,8 @@ class S3services:
         # Create bucket
         try:
             if region is None:
+                """If a region is not specified, the bucket is created in the 
+                S3 default region(us - east - 1)."""
                 s3_client = boto3.client('s3')
                 s3_client.create_bucket(Bucket='fandoo-static')
             else:
@@ -18,6 +20,7 @@ class S3services:
         except ClientError as e:
             logging.error(e)
             return False
+        """ return True if bucket created, else False """
         return True
 
     """List Existing Buckets
@@ -37,3 +40,4 @@ class S3services:
         response = boto3.client.delete_bucket(
             Bucket='fandoo-static'
         )
+        print(response)

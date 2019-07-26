@@ -5,7 +5,7 @@ for key in r.scan_iter():
     print(key)
 
 
-class RedisMethods:
+class RedisServices:
 
     def set_token(self, key, value):
         # this method is used to add the data to redis

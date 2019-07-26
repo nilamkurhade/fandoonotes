@@ -10,7 +10,6 @@ from celery import shared_task
 
 
 @shared_task
-@shared_task
 def count_notes():  # count the number of notes
     return Notes.objects.count()
 
@@ -25,10 +24,10 @@ def update_notes(notes_id, title,trash, deleted):  # rename the title
     return note
 
 
-@app.task
-def longtime_add(x, y):
-    print('long time task begins')
-    # sleep 5 seconds
-    time.sleep(5)
-    print('long time task finished')
-    return x + y
+# @app.task
+# def longtime_add(x, y):
+#     print('long time task begins')
+#     # sleep 5 seconds
+#     time.sleep(5)
+#     print('long time task finished')
+#     return x + y

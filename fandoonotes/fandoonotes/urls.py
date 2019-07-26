@@ -50,7 +50,9 @@ urlpatterns = [
     path('label/<int:id>/', views.LabelViewDetails.as_view()),
     path('note/<int:id>/', views.Notedata.as_view()),
     path('trash/', views.NoteTrashView.as_view()),
+    path('trash/<int:id>/', views.NoteTrash.as_view()),
     path('archive/', views.NoteArchiveview.as_view()),
+    path('archive/<int:id>/', views.NoteArchive.as_view()),
     path('', include(router.urls)),
 
 ]

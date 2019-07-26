@@ -24,7 +24,7 @@ import boto3
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
-from .service import RedisMethods
+from .service import RedisServices
 from .models import Notes
 from .models import Labels
 from .serializer import NoteSerializer
@@ -73,7 +73,7 @@ def special(request):
 @login_required
 def user_logout(request):
     logout(request)
-    RedisMethods.flush(self)
+    RedisServices.flush(self)
     return HttpResponseRedirect(reverse('index'))
 
 
@@ -100,8 +100,8 @@ def user_login(request):
                     jwt_token = jwt.encode(payload, 'secret', 'HS256').decode('utf-8')
                     print("11111111111111", jwt_token)
                     # storing token into redis cache
-                    RedisMethods.set_token(self, 'token', jwt_token)
-                    restoken = RedisMethods.get_token(self, 'token')
+                    RedisServices.set_token(self, 'token', jwt_token)
+                    restoken = RedisServices.get_token(self, 'token')
                     print("token in redis", restoken)
                     login(request, user)
                     message = "you have successfully logged in"
@@ -111,6 +111,7 @@ def user_login(request):
                             'username': user.username,
                             'Password': user.password,
                             'Email': user.email,
+                            'token': jwt_token,
                             'status_code': 200
 
                     }
@@ -191,30 +192,37 @@ def email(request):
 
 # to upload images in s3 bucket
 @csrf_exempt
-@method_decorator(api_login_required)
+# @method_decorator(api_login_required)
 def s3_upload(request):
     try:
         message = None
         status_code = 500
         if request.method == 'POST':
+
             # taking input image files
             uploaded_file = request.FILES.get('document')
+            print("fsgf",uploaded_file)
             if uploaded_file is None:
                 message = "Empty file can not be uploaded"
-                # status_code = 400
-                # return JsonResponse({'message': message, 'status': status_code})
+                status_code = 400
                 logger.error(message)
+                return JsonResponse({'message': message, 'status': status_code})
+
             else:
-                file_name = 'test55.jpg'
+                file_name = 'testing.jpg'
                 s3_client = boto3.client('s3')
-                s3_client.upload_fileobj(uploaded_file, 'fandoo-static', Key=file_name)
+                s3uploadresponse = s3_client.upload_fileobj(uploaded_file, 'fandoo-static', Key=file_name)
+                print('s3', s3uploadresponse)
                 message = "Image successfully uploaded"
                 status_code = 200     # success msg
+                logger.info(message)
                 return JsonResponse({'message': message, 'status': status_code})
+
         else:
             status_code = 400    # bad request
             message = "The request is not valid."
-        return JsonResponse({'message': message, 'status': status_code})
+            logger.error(message)
+            return JsonResponse({'message': message, 'status': status_code})
     except RuntimeError:
         print(" ")
 
@@ -232,7 +240,7 @@ class NotesList(APIView):
     @method_decorator(api_login_required)
     def get(self, request):
         try:
-            restoken = RedisMethods.get_token(self, 'token')
+            restoken = RedisServices.get_token(self, 'token')
             decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
             dec_id = decoded_token.get('id')
             user = User.objects.get(id=dec_id)
@@ -241,6 +249,7 @@ class NotesList(APIView):
             if notes is None:
                 message = "Notes not available"
                 logger.error(message)
+                return Response({"error": message})
 
             else:
                 data = NoteSerializer(notes, many=True).data
@@ -259,7 +268,7 @@ class NotesList(APIView):
     # to create new note
     @method_decorator(api_login_required)
     def post(self, request):
-        restoken = RedisMethods.get_token(self, 'token')
+        restoken = RedisServices.get_token(self, 'token')
         decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
         print("decode token ", decoded_token)
         dec_id = decoded_token.get('id')
@@ -422,10 +431,10 @@ class LabelViewDetails(APIView):
 # listing all the notes which are in trash
 class NoteTrashView(APIView):
     # listing all the notes which are in trash
-    @method_decorator(api_login_required)
+    # @method_decorator(api_login_required)
     def get(self, request):
         try:
-            restoken = RedisMethods.get_token(self, 'token')
+            restoken = RedisServices.get_token(self, 'token')
             decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
             print("decode token ", decoded_token)
             dec_id = decoded_token.get('id')
@@ -433,24 +442,74 @@ class NoteTrashView(APIView):
             user = User.objects.get(id=dec_id)
             print("username", user)
             trash_notes = Notes.objects.filter(created_by=user, trash=True)
-            if trash_notes is None:
-                error = "notes not available"
-                # displaying error message through logger
-                logger.error(error)
-            else:
-                data = NoteSerializer(trash_notes, many=True)
-                return Response(data.data, status=200)
+            # if trash_notes is None:
+            #     error = "notes not available"
+            #     # displaying error message through logger
+            #     logger.error(error)
+            # else:
+            data = NoteSerializer(trash_notes, many=True)
+            return Response(data.data, status=200)
         except Notes.DoesNotExist as e:
             return JsonResponse({"error": "Notes not available in trash"}, status=404)
 
 
-# listing all the notes which are archive
+# to set the achive note
+class NoteTrash(APIView):
+
+    # to get particular object
+    def get_object(self, id=None):
+        obj = Notes.objects.get(id=id)
+        return obj
+
+    def put(self, request, id=None):
+        """ This handles PUT request to archive particular note by note id """
+
+        result = {
+            "message": "Something bad happened",
+            "success": False,
+            "data": []
+        }
+        logger.info("Enter In The PUT Method Set trash API")
+        data = request.data['trash']
+        print("Data", data)
+        try:
+            if not id:
+                raise ValueError
+            logger.debug("Enter In The Try Block")
+            # get the note object by passing the note id
+            instance = self.get_object(id)
+            print(instance, "=====================")
+            if not instance:
+                raise Notes.DoesNotExist
+            # check note is not trash and not deleted
+
+            if not instance.is_archive:
+                # update the record and set the archive
+                instance.trash = data
+                instance.save()
+                # return the success message and archive data
+                result["message"] = "Archive Set Successfully"
+                result["success"] = True
+                result["data"] = data
+                logger.debug("Return The Response To The Browser..")
+                return Response(result, status=200)
+        # except the exception and return the response
+        except ValueError as e:
+            result["Message"] = "Note id cant blank"
+            logger.debug("Return The Response To The Browser..")
+            return Response(result, status=204)
+        except Notes.DoesNotExist as e:
+            result["message"] = "No record found for note id "
+            logger.debug("Return The Response To The Browser..")
+        return Response(result, status=204)
+
+
 class NoteArchiveview(APIView):
     # listing all the notes which are archive
-    @method_decorator(api_login_required)
+    # @method_decorator(api_login_required)
     def get(self, request):
         try:
-            restoken = RedisMethods.get_token(self, 'token')
+            restoken = RedisServices.get_token(self, 'token')
             decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
             print("decode token ", decoded_token)
             dec_id = decoded_token.get('id')
@@ -458,17 +517,69 @@ class NoteArchiveview(APIView):
             user = User.objects.get(id=dec_id)
             print("username", user)
             archive_notes = Notes.objects.filter(created_by=user, is_archive=True)
-            if archive_notes is None:
-                error = "notes not available in archive"
-                # displaying error message through logger
-                logger.error(error)
-            else:
-                data = NoteSerializer(archive_notes, many=True)
+            print("===========", archive_notes)
+            # if archive_notes is None:
+            #     error = "notes not available in archive"
+            #     # displaying error message through logger
+            #     logger.error(error)
+            # else:
+            data = NoteSerializer(archive_notes, many=True)
             return Response(data.data, status=200)
         except Notes.DoesNotExist as e:
             error = "Notes not available in Archive"
-            # return JsonResponse({"error": "Notes not available in Archive"}, status=404)
             logger.exception(error)
+            return JsonResponse({"error": "Notes not available in Archive"}, status=404)
+
+
+# to set the achive note
+class NoteArchive(APIView):
+
+    # to get particular object
+    def get_object(self, id=None):
+        obj = Notes.objects.get(id=id)
+        return obj
+
+    def put(self, request, id=None):
+        """ This handles PUT request to achieve particular note by note id """
+
+        result = {
+            "message": "Something bad happened",
+            "success": False,
+            "data": []
+        }
+        logger.info("Enter In The PUT Method Set archive API")
+        data = request.data['is_archive']
+        print("Data", data)
+        try:
+            if not id:
+                raise ValueError
+            logger.debug("Enter In The Try Block")
+            # get the note object by passing the note id
+            instance = self.get_object(id)
+            print(instance, "=====================")
+            if not instance:
+                raise Notes.DoesNotExist
+            # check note is not trash and not deleted
+
+            if not instance.is_archive:
+                # update the record and set the archive
+                instance.is_archive = data
+                instance.save()
+                # return the success message and archive data
+                result["message"] = "Archive Set Successfully"
+                result["success"] = True
+                result["data"] = data
+                logger.debug("Return The Response To The Browser..")
+                return Response(result, status=200)
+        # except the exception and return the response
+        except ValueError as e:
+            result["Message"] = "Note id cant blank"
+            logger.debug("Return The Response To The Browser..")
+            return Response(result, status=204)
+        except Notes.DoesNotExist as e:
+            result["message"] = "No record found for note id "
+            logger.debug("Return The Response To The Browser..")
+        return Response(result, status=204)
 
 
 # view to search notes data
