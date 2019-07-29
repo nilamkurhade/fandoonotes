@@ -9,7 +9,6 @@ import jwt
 from django.utils.decorators import method_decorator
 from requests import Response
 from rest_framework import serializers, status
-
 from .forms import SignupForm
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.core.mail import EmailMessage
@@ -32,7 +31,6 @@ from .serializer import LabelSerializer
 from django.shortcuts import render
 from django.http import HttpResponse
 from rest_framework.views import APIView
-from rest_framework.response import Response
 import pickle
 import redis
 from .decorators import api_login_required
@@ -193,7 +191,7 @@ def email(request):
 # to upload images in s3 bucket
 @csrf_exempt
 # @method_decorator(api_login_required)
-def s3_upload(request):
+def image_upload(request):
     try:
         message = None
         status_code = 500
@@ -203,7 +201,7 @@ def s3_upload(request):
             uploaded_file = request.FILES.get('document')
             print("fsgf",uploaded_file)
             if uploaded_file is None:
-                message = "Empty file can not be uploaded"
+                message = "Please select the file to upload"
                 status_code = 400
                 logger.error(message)
                 return JsonResponse({'message': message, 'status': status_code})
@@ -442,11 +440,6 @@ class NoteTrashView(APIView):
             user = User.objects.get(id=dec_id)
             print("username", user)
             trash_notes = Notes.objects.filter(created_by=user, trash=True)
-            # if trash_notes is None:
-            #     error = "notes not available"
-            #     # displaying error message through logger
-            #     logger.error(error)
-            # else:
             data = NoteSerializer(trash_notes, many=True)
             return Response(data.data, status=200)
         except Notes.DoesNotExist as e:
@@ -478,7 +471,6 @@ class NoteTrash(APIView):
             logger.debug("Enter In The Try Block")
             # get the note object by passing the note id
             instance = self.get_object(id)
-            print(instance, "=====================")
             if not instance:
                 raise Notes.DoesNotExist
             # check note is not trash and not deleted
@@ -637,3 +629,4 @@ class NotesDocumentViewSet(DocumentViewSet):
         'title': 'title.raw',
         'discription': 'discription.raw',
     }
+

@@ -40,6 +40,14 @@ class ProjectTests(TestCase):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
 
+    def test_trash_view(self):
+        response = self.client.get('/trash/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_archive_view(self):
+        response = self.client.get('/archive/')
+        self.assertEqual(response.status_code, 200)
+
 
 class SimpleTest(unittest.TestCase):
     def setup(self):
@@ -50,14 +58,13 @@ class SimpleTest(unittest.TestCase):
 # Testing the api
 class EntryTest(TestCase):
 
+    # test case for login api
     def test_details(self):
         # Issue a get request
         response = self.client.get('/login/')
         # check that the response is 200 OK.
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Logout")
-
-        # test case for login api
 
     def test_signup_form(self):
         # Issue a get request
@@ -84,4 +91,16 @@ class EntryTest(TestCase):
         # check that the response is 200 OK.
         self.assertEqual(response.status_code, 200)
 
-    
+    def test_trash_view(self):
+        # Issue a get request
+        response = self.client.get('/trash/')
+        # check that the response is 200 OK.
+        self.assertEqual(response.status_code, 200)
+
+    def test_archive_view(self):
+        # Issue a get request
+        response = self.client.get('/archive/')
+        # check that the response is 200 OK.
+        self.assertEqual(response.status_code, 200)
+
+

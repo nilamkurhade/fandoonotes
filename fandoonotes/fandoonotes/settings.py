@@ -11,14 +11,14 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 import logging
 import os
-
-
 from dotenv import load_dotenv, find_dotenv
 
 from pathlib import *
 load_dotenv(find_dotenv())
 env_path = Path('.')/'.env'
 
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'social_django',
     'django_elasticsearch_dsl',
     'django_elasticsearch_dsl_drf',
+    'django_q',
 
 
 ]
