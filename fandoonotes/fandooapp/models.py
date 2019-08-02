@@ -45,6 +45,7 @@ class Notes(models.Model):
     trash = models.BooleanField(default=False, blank=True)
     labels = models.CharField(max_length=50, blank=False)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, default=1, related_name='owner')
+    collaborate = models.ManyToManyField(User, related_name='collaborate_user', blank=True)
 
     def __str__(self):
         return self.title

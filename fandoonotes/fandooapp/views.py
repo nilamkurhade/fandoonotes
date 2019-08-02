@@ -1,3 +1,5 @@
+import json
+
 from .document import NotesDocument
 from .serializer import NotesDocumentSerializer
 import self as self
@@ -146,7 +148,7 @@ def signup(request):
                 message = render_to_string('fandooapp/account_activation_email.html', {
                     'user': user,
                     'domain': current_site.domain,
-                    'uid': urlsafe_base64_encode(force_bytes(user.pk)).decode(),
+                    'uid': urlsafe_base64_encode(force_bytes(user.pk)),
                     'token': account_activation_token.make_token(user),
                 })
                 to_email = form.cleaned_data.get('email')
@@ -291,7 +293,6 @@ class Notedata(APIView):
         return obj
 
     # to get id wise note
-
     def get(self, request, id=None):
         try:
             data = self.get_object(id)
@@ -412,7 +413,7 @@ class LabelViewDetails(APIView):
             instance = self.get_object(id)
             # CHECK THE NOTE is_deleted and is_trashed status Of both are True Then Update Both The Values
             print(instance)
-            if instance.is_deleted == False:
+            if instance.is_deleted is False:
                 # UPDATE THE is_deleted
                 instance.is_deleted = True
                 # UPDATE THE is_trashed
@@ -496,8 +497,8 @@ class NoteTrash(APIView):
         return Response(result, status=204)
 
 
+# listing all the notes which are archive
 class NoteArchiveview(APIView):
-    # listing all the notes which are archive
     # @method_decorator(api_login_required)
     def get(self, request):
         try:
@@ -510,11 +511,6 @@ class NoteArchiveview(APIView):
             print("username", user)
             archive_notes = Notes.objects.filter(created_by=user, is_archive=True)
             print("===========", archive_notes)
-            # if archive_notes is None:
-            #     error = "notes not available in archive"
-            #     # displaying error message through logger
-            #     logger.error(error)
-            # else:
             data = NoteSerializer(archive_notes, many=True)
             return Response(data.data, status=200)
         except Notes.DoesNotExist as e:
@@ -630,3 +626,38 @@ class NotesDocumentViewSet(DocumentViewSet):
         'discription': 'discription.raw',
     }
 
+
+class Notecollaborator(APIView):
+    def get_object(self, id=None):
+        obj = Notes.objects.get(id=id)
+        return obj
+
+    def put(self, request, id=None):
+        data = request.data
+        print("data", data)
+        coll_email = data['collaborate']
+        print("fkjhgkj== ", coll_email)
+        coll_user = User.objects.filter(email=coll_email) & User.objects.filter(is_active=1) & User.objects.values()
+        print("userrrrrrrrrrrrrrd", coll_user)
+        for i in coll_user:
+            print("dfgdgjhdfgdfjgdfjhg",i.id)
+
+        # coll_id = coll_user.values('id')
+        # print("iddddddddddddddd", coll_id)
+        # collaborate_id = json.dumps(list(coll_id))
+        # print("dgjgfjfghfgfgkjgfkjgfhhjfgj", collaborate_id)
+        noteinstance = self.get_object(id=id)
+        print("note id====", noteinstance.id)
+        if coll_email:
+            return Response('data available in database')
+            restoken = RedisServices.get_token(self, 'token')
+            # decoding to get user id and username
+            decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
+            print("decode token ", decoded_token)
+            decoded_id = decoded_token.get('id')
+            print("user id", decoded_id)
+            decoded_email = decoded_token.get('email')
+            print("fgfg", decoded_email)
+            user = User.objects.get(id=decoded_id)
+
+        return Response('ghfg')

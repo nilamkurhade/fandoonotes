@@ -16,6 +16,8 @@ def api_login_required(method):
         print("decode token ", decoded_token)
         decoded_id = decoded_token.get('id')
         print("user id", decoded_id)
+        decoded_email = decoded_token.get('email')
+        print("fgfg", decoded_email)
         user = User.objects.get(id=decoded_id)
         print("username", user)
         # checking the decoded token id into database
