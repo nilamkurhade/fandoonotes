@@ -627,37 +627,77 @@ class NotesDocumentViewSet(DocumentViewSet):
     }
 
 
-class Notecollaborator(APIView):
+class NoteCollaborator(APIView):
     def get_object(self, id=None):
         obj = Notes.objects.get(id=id)
         return obj
 
     def put(self, request, id=None):
-        data = request.data
-        print("data", data)
-        coll_email = data['collaborate']
-        print("fkjhgkj== ", coll_email)
-        coll_user = User.objects.filter(email=coll_email) & User.objects.filter(is_active=1) & User.objects.values()
-        print("userrrrrrrrrrrrrrd", coll_user)
-        for i in coll_user:
-            print("dfgdgjhdfgdfjgdfjhg",i.id)
-
-        # coll_id = coll_user.values('id')
-        # print("iddddddddddddddd", coll_id)
-        # collaborate_id = json.dumps(list(coll_id))
-        # print("dgjgfjfghfgfgkjgfkjgfhhjfgj", collaborate_id)
+        """ This handles PUT request to collaborate particular note by note id """
+        result = {
+            "message": "Something bad happened",
+            "success": False,
+            "data": []
+        }
+        logger.info("Enter In The PUT Method collaborate API")
+        colobrate_data = request.data
+        # getting
+        collaborator_email = colobrate_data['collaborate']
+        collaborate_user = User.objects.filter(email=collaborator_email) & User.objects.filter(is_active=1)
+        print("collaborate user", collaborate_user)
+        user_id = []
+        for i in collaborate_user:
+            user_id.append(i.id)
+        collaborate_id = user_id[0]
         noteinstance = self.get_object(id=id)
-        print("note id====", noteinstance.id)
-        if coll_email:
-            return Response('data available in database')
+        try:
+            if not id:
+                raise ValueError
+            logger.debug("Enter In The Try Block")
             restoken = RedisServices.get_token(self, 'token')
             # decoding to get user id and username
             decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
-            print("decode token ", decoded_token)
             decoded_id = decoded_token.get('id')
-            print("user id", decoded_id)
             decoded_email = decoded_token.get('email')
-            print("fgfg", decoded_email)
             user = User.objects.get(id=decoded_id)
-
-        return Response('ghfg')
+            if collaborator_email:
+                print("data available in database", collaborator_email)
+                if collaborator_email is decoded_email:
+                    result["message"] = "with same email idd can not be collaborate, Please pass the correct email id"
+                    result["success"] = True
+                    result["data"] = colobrate_data
+                    return Response(result, status=400)
+                else:
+                    noteinstance.collaborate.add(int(collaborate_id))
+                    noteinstance.save()
+                    current_site = get_current_site(request)
+                    # creating mail body
+                    mail_subject = 'Check collaborated note'
+                    message = render_to_string('fandooapp/collaborate_email.html', {
+                        'user': user,
+                        'domain': current_site.domain,
+                    })
+                    to_email = collaborator_email
+                    email = EmailMessage(
+                        mail_subject, message, to=[to_email]
+                    )
+                    print("llllllllll", email)
+                    email.send()
+                    result["message"] = "Please check your email address to get the collaborated note"
+                    result["success"] = True
+                    result["data"] = colobrate_data
+                    logger.debug("Return The Response To The Browser..")
+                    return Response(result, status=200)
+            else:
+                result["message"] = "User not found"
+                result["success"] = True
+                result["data"] = colobrate_data
+                return Response(result, status=404)
+        except ValueError as e:
+            result["Message"] = "Note id cant blank"
+            logger.debug("Return The Response To The Browser..")
+            return Response(result, status=204)
+        except Notes.DoesNotExist as e:
+            result["message"] = "No record found for note id "
+            logger.debug("Return The Response To The Browser..")
+        return Response(result, status=200)
