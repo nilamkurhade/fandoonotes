@@ -253,6 +253,17 @@ class NotesList(APIView):
 
             else:
                 data = NoteSerializer(notes, many=True).data
+                length = len(data)
+                print(length, '------------->')
+                my_labels = []
+                for index in range(0, length):
+                    if len(data[index]['labels']) is not 0:
+                        for lb in range(0, len(data[index]['labels'])):
+                            label_id = data[index]['labels'].pop(lb)
+                            print(data[index]['labels'])
+                            label_name = Labels.objects.get(id=label_id).label
+                            print(label_name)
+                            data[index]['labels'].insert(0, label_name)
                 # storing notes in redis cache
                 r = redis.StrictRedis('localhost')
                 mydict = notes
@@ -341,16 +352,19 @@ class LabelList(APIView):
     # list of labels
     @method_decorator(api_login_required)
     def get(self, request, is_deleted=None):
-        try:
-            labels = Labels.objects.filter(is_deleted=True)
-            if labels is None:
-                message = "labels not available"
-                logger.error(message)
-            else:
-                data = LabelSerializer(labels, many=True)
-                return Response(data.data)
-        except Notes.DoesNotExist as e:
-            return JsonResponse({"error": "labels not available."}, status=404)
+        label = Labels.objects.filter(is_deleted=False)
+        serializer = LabelSerializer(label, many=True).data
+
+        print('serializer----<>', serializer)
+
+        length = len(serializer)
+        my_labels = []
+        for index in range(0, length):
+            my_labels.append(serializer[index]['label'])
+
+        print(my_labels)
+
+        return Response(serializer, status=200)
 
     # creating the new label
     @method_decorator(api_login_required)
@@ -640,39 +654,45 @@ class NoteCollaborator(APIView):
             "data": []
         }
         logger.info("Enter In The PUT Method collaborate API")
-        colobrate_data = request.data
-        # getting
-        collaborator_email = colobrate_data['collaborate']
+        collobrate_data = request.data
+        print("collobrate_data",collobrate_data)
+        # getting user's email id from input data
+        collaborator_email = collobrate_data['collaborate']
+        # gettting collaborate user from collaborator email
         collaborate_user = User.objects.filter(email=collaborator_email) & User.objects.filter(is_active=1)
         print("collaborate user", collaborate_user)
         user_id = []
         for i in collaborate_user:
             user_id.append(i.id)
+        # getting user id of collaborate_user
         collaborate_id = user_id[0]
         noteinstance = self.get_object(id=id)
         try:
             if not id:
                 raise ValueError
             logger.debug("Enter In The Try Block")
+            # token of logged in user from redis cache
             restoken = RedisServices.get_token(self, 'token')
-            # decoding to get user id and username
+            # decoding token to get user id and email of logged in user
             decoded_token = jwt.decode(restoken, 'secret', algorithms=['HS256'])
             decoded_id = decoded_token.get('id')
             decoded_email = decoded_token.get('email')
             user = User.objects.get(id=decoded_id)
+            # checking in database that input collaborate email is present in database or not
             if collaborator_email:
                 print("data available in database", collaborator_email)
+                # checking collaborate email and logged in user email id is same or not
                 if collaborator_email is decoded_email:
-                    result["message"] = "with same email idd can not be collaborate, Please pass the correct email id"
-                    result["success"] = True
-                    result["data"] = colobrate_data
+                    result["message"] = "with same email id can not be collaborate, Please pass the correct email id"
+                    result["success"] = False
                     return Response(result, status=400)
                 else:
+                    # collaborating collaborate user id with note
                     noteinstance.collaborate.add(int(collaborate_id))
                     noteinstance.save()
                     current_site = get_current_site(request)
                     # creating mail body
-                    mail_subject = 'Check collaborated note'
+                    mail_subject = 'collaborated note'
                     message = render_to_string('fandooapp/collaborate_email.html', {
                         'user': user,
                         'domain': current_site.domain,
@@ -683,21 +703,34 @@ class NoteCollaborator(APIView):
                     )
                     print("llllllllll", email)
                     email.send()
-                    result["message"] = "Please check your email address to get the collaborated note"
+                    result["message"] = "Note Collaborated Successfully"
                     result["success"] = True
-                    result["data"] = colobrate_data
+                    result["data"] = collobrate_data
                     logger.debug("Return The Response To The Browser..")
                     return Response(result, status=200)
             else:
-                result["message"] = "User not found"
-                result["success"] = True
-                result["data"] = colobrate_data
+                result["message"] = "Given collaborated email not found in database"
+                result["success"] = False
                 return Response(result, status=404)
         except ValueError as e:
             result["Message"] = "Note id cant blank"
             logger.debug("Return The Response To The Browser..")
-            return Response(result, status=204)
         except Notes.DoesNotExist as e:
             result["message"] = "No record found for note id "
             logger.debug("Return The Response To The Browser..")
         return Response(result, status=200)
+
+
+class getAllUser(APIView):
+    @method_decorator(api_login_required)
+    def get(self, request, id=None):
+        user = User.objects.all()
+        print(user)
+        users = []
+        if user:
+            for email in user:
+                users.append(email.email)
+                user_list = users
+        else:
+            return Response('Error ')
+        return Response(user_list)

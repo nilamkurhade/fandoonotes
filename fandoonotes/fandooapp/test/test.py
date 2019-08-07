@@ -26,3 +26,17 @@ def test_archive_details(rf):
     request = rf.get('/archive/')
     response = NoteArchiveview(request)
     assert response.status_code == 200
+
+
+def test_search_details(rf):
+    request = rf.get('/search/?title=test2/')
+    response = NoteArchiveview(request)
+    assert response.status_code == 200
+
+
+def test_collaborate_details(rf):
+    request = rf.get('/collaborate/3/')
+    response = NoteArchiveview(request)
+    assert response.status_code == 200
+
+

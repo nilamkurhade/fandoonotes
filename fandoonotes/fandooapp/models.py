@@ -34,6 +34,15 @@ def update_user_profile(sender, instance, created, **kwargs):
     instance.profile.save()
 
 
+# model for label
+class Labels(models.Model):
+    title = models.CharField(max_length=20, blank=False)
+    is_deleted = models.BooleanField(default=False, blank=True)
+
+    def __str__(self):
+        return self.title
+
+
 # model class for note
 class Notes(models.Model):
     title = models.CharField(max_length=30, blank=False)
@@ -43,7 +52,7 @@ class Notes(models.Model):
     color = models.CharField(max_length=20, blank=False)
     image = models.ImageField(upload_to='static/img', blank=True)
     trash = models.BooleanField(default=False, blank=True)
-    labels = models.CharField(max_length=50, blank=False)
+    labels = models.ManyToManyField(Labels,related_name='note_labels', blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, default=1, related_name='owner')
     collaborate = models.ManyToManyField(User, related_name='collaborate_user', blank=True)
 
@@ -51,10 +60,3 @@ class Notes(models.Model):
         return self.title
 
 
-# model for label
-class Labels(models.Model):
-    title = models.CharField(max_length=20, blank=False)
-    is_deleted = models.BooleanField(default=False, blank=True)
-
-    def __str__(self):
-        return self.title

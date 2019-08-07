@@ -54,6 +54,7 @@ urlpatterns = [
     path('archive/', views.NoteArchiveview.as_view()),
     path('archive/<int:id>/', views.NoteArchive.as_view()),
     path('collaborate/<int:id>/', views.NoteCollaborator.as_view()),
+    path('alluserlist/', views.getAllUser.as_view()),
     path('', include(router.urls)),
 
 ]
