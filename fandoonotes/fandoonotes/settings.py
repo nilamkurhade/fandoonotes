@@ -12,7 +12,8 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 import logging
 import os
 from dotenv import load_dotenv, find_dotenv
-
+import sys
+print(sys.path)
 from pathlib import *
 load_dotenv(find_dotenv())
 env_path = Path('.')/'.env'
@@ -52,8 +53,8 @@ INSTALLED_APPS = [
     'social_django',
     'django_elasticsearch_dsl',
     'django_elasticsearch_dsl_drf',
-    'django_q',
-
+    # 'django_q',
+    # 'djcelery',
 
 ]
 
@@ -223,6 +224,7 @@ ELASTICSEARCH_DSL = {
     },
 }
 
+# CELERY STUFF
 BROKER_URL = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
@@ -238,3 +240,5 @@ try:
     from local_settings import *
 except ImportError as e:
     pass
+
+

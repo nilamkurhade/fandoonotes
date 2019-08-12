@@ -1,5 +1,4 @@
-import json
-
+from .Services.noteService import NoteServices
 from .document import NotesDocument
 from .serializer import NotesDocumentSerializer
 import self as self
@@ -38,6 +37,7 @@ import redis
 from .decorators import api_login_required
 import logging
 from rest_framework.response import Response
+
 
 from django_elasticsearch_dsl_drf.constants import (
     LOOKUP_FILTER_RANGE,
@@ -287,6 +287,7 @@ class NotesList(APIView):
         user = User.objects.get(id=dec_id)
         print("username", user)
         serializer = NoteSerializer(data=request.data)
+        # serializer = NoteServices.create_note(self)
         try:
             if serializer.is_valid():
                 serializer.save(created_by=user)
@@ -354,16 +355,10 @@ class LabelList(APIView):
     def get(self, request, is_deleted=None):
         label = Labels.objects.filter(is_deleted=False)
         serializer = LabelSerializer(label, many=True).data
-
-        print('serializer----<>', serializer)
-
         length = len(serializer)
         my_labels = []
         for index in range(0, length):
             my_labels.append(serializer[index]['label'])
-
-        print(my_labels)
-
         return Response(serializer, status=200)
 
     # creating the new label
@@ -721,16 +716,28 @@ class NoteCollaborator(APIView):
         return Response(result, status=200)
 
 
+# to get list of all users
 class getAllUser(APIView):
     @method_decorator(api_login_required)
     def get(self, request, id=None):
+        result = {
+            "message": "Something bad happened",
+            "success": False,
+            "data": []
+        }
         user = User.objects.all()
-        print(user)
         users = []
         if user:
             for email in user:
                 users.append(email.email)
                 user_list = users
         else:
+            result["success"] = True,
+            result["message"] = "list of users"
+
             return Response('Error ')
-        return Response(user_list)
+        result["success"] = True,
+        result["message"] = "list of users",
+        result["data"] = users
+        return Response(users, status=200)
+        # return Response(user_list)

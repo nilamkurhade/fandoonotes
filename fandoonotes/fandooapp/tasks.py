@@ -1,10 +1,8 @@
 from __future__ import absolute_import
-import time
 from .models import Notes
-from itertools import chain
-from celery import app
 from celery import shared_task
-
+from celery.task.schedules import crontab
+from celery.decorators import periodic_task
 
 """ The @shared_task decorator returns a proxy that always uses the task in the current app: """
 
@@ -15,19 +13,20 @@ def count_notes():  # count the number of notes
 
 
 @shared_task
-def update_notes(notes_id, title,trash, deleted):  # rename the title
-    note = Notes.objects.get(id=notes_id)
+def update_notes(note_id, title, trash, is_deleted):  # rename the title
+    note = Notes.objects.get(id=note_id)
     note.title = title  # take title field
     note.trash = trash
-    note.deleted = deleted
+    note.is_deleted = is_deleted
     note.save()
     return note
 
+# to delete the notes of after every 10 days
+@periodic_task(run_every=(crontab(0, 0, day_of_month='*/10')), name="delete_note", ignore_result=True)
+def delete_notes(note_id):
+    note = Notes.objects.get(id=note_id)
+    note.delete()
 
-# @app.task
-# def longtime_add(x, y):
-#     print('long time task begins')
-#     # sleep 5 seconds
-#     time.sleep(5)
-#     print('long time task finished')
-#     return x + y
+
+
+
