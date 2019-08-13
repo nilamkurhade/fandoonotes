@@ -287,7 +287,7 @@ class NotesList(APIView):
         user = User.objects.get(id=dec_id)
         print("username", user)
         serializer = NoteSerializer(data=request.data)
-        # serializer = NoteServices.create_note(self)
+        # serializer = NoteServices.create_note()
         try:
             if serializer.is_valid():
                 serializer.save(created_by=user)
@@ -378,6 +378,7 @@ class LabelList(APIView):
 class LabelViewDetails(APIView):
 
     # to get particular object
+    @method_decorator(api_login_required)
     def get_object(self, id=None):
         try:
             obj = Labels.objects.get(id=id)
@@ -396,6 +397,7 @@ class LabelViewDetails(APIView):
             return JsonResponse({"Error": "label not available of this id"}, status=Response.status_code)
 
     # editing the label
+    @method_decorator(api_login_required)
     def put(self, request, id=None):
         try:
             data = request.data
@@ -440,6 +442,7 @@ class LabelViewDetails(APIView):
 class NoteTrashView(APIView):
     # listing all the notes which are in trash
     # @method_decorator(api_login_required)
+    @method_decorator(api_login_required)
     def get(self, request):
         try:
             restoken = RedisServices.get_token(self, 'token')
@@ -460,10 +463,12 @@ class NoteTrashView(APIView):
 class NoteTrash(APIView):
 
     # to get particular object
+    @method_decorator(api_login_required)
     def get_object(self, id=None):
         obj = Notes.objects.get(id=id)
         return obj
 
+    @method_decorator(api_login_required)
     def put(self, request, id=None):
         """ This handles PUT request to archive particular note by note id """
 
@@ -508,7 +513,7 @@ class NoteTrash(APIView):
 
 # listing all the notes which are archive
 class NoteArchiveview(APIView):
-    # @method_decorator(api_login_required)
+    @method_decorator(api_login_required)
     def get(self, request):
         try:
             restoken = RedisServices.get_token(self, 'token')
@@ -532,10 +537,12 @@ class NoteArchiveview(APIView):
 class NoteArchive(APIView):
 
     # to get particular object
+    @method_decorator(api_login_required)
     def get_object(self, id=None):
         obj = Notes.objects.get(id=id)
         return obj
 
+    @method_decorator(api_login_required)
     def put(self, request, id=None):
         """ This handles PUT request to achieve particular note by note id """
 
@@ -637,10 +644,12 @@ class NotesDocumentViewSet(DocumentViewSet):
 
 
 class NoteCollaborator(APIView):
+    @method_decorator(api_login_required)
     def get_object(self, id=None):
         obj = Notes.objects.get(id=id)
         return obj
 
+    @method_decorator(api_login_required)
     def put(self, request, id=None):
         """ This handles PUT request to collaborate particular note by note id """
         result = {
@@ -725,10 +734,12 @@ class getAllUser(APIView):
             "success": False,
             "data": []
         }
+        # getting all users from database
         user = User.objects.all()
         users = []
         if user:
             for email in user:
+                # taking users email from user object
                 users.append(email.email)
                 user_list = users
         else:
@@ -740,4 +751,3 @@ class getAllUser(APIView):
         result["message"] = "list of users",
         result["data"] = users
         return Response(users, status=200)
-        # return Response(user_list)

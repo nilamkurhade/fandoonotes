@@ -5,7 +5,11 @@ from django.conf import settings
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fandoonotes.settings')
-app = Celery('fandoonotes')
+app = Celery('fandoonotes',
+             broker='amqp://admin:admin@1234@localhost/admin_vhost',
+             backend='rpc://',
+             include=['fandooapp.tasks'])
+
 
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.

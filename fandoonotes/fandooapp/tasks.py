@@ -1,10 +1,17 @@
 from __future__ import absolute_import
+from self import self
 from .models import Notes
 from celery import shared_task
 from celery.task.schedules import crontab
 from celery.decorators import periodic_task
-
+from .mailer import Mailer
 """ The @shared_task decorator returns a proxy that always uses the task in the current app: """
+
+mail = Mailer()
+mail.send_messages(subject='FundooNote account verification',
+                   template='fandooapp/mail.html',
+                   context={'customer': self},
+                   to_emails=['nilammore820@gmail.com'])
 
 
 @shared_task

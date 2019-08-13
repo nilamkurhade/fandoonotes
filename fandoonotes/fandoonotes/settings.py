@@ -53,8 +53,6 @@ INSTALLED_APPS = [
     'social_django',
     'django_elasticsearch_dsl',
     'django_elasticsearch_dsl_drf',
-    # 'django_q',
-    # 'djcelery',
 
 ]
 
@@ -224,17 +222,6 @@ ELASTICSEARCH_DSL = {
     },
 }
 
-# CELERY STUFF
-BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Africa/Nairobi'
-
-
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", __file__)
-# django.setup()
 
 try:
     from local_settings import *
