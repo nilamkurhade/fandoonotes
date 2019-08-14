@@ -14,7 +14,6 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
 # from django.conf.urls import include
 from django.conf.urls import url, include
 from fandooapp import views
@@ -32,7 +31,7 @@ router.register(r'^search', views.NotesDocumentViewSet, basename='search/')
 # urls
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    url('admin/', admin.site.urls),
     url(r'^$', views.home, name='home'),
     path('fandooapp/', include('django.contrib.auth.urls')),
     url(r'^index/$', views.index, name='index'),
@@ -46,16 +45,16 @@ urlpatterns = [
         views.activate, name='activate'),
     url(r'^upload/$', views.image_upload, name='upload'),
     url(r'^swagger/', get_swagger_view(title="API Docs"), name="Docs"),
-    path('notes/', views.NotesList.as_view()),
-    path('labels/', views.LabelList.as_view()),
-    path('label/<int:id>/', views.LabelViewDetails.as_view()),
-    path('note/<int:id>/', views.Notedata.as_view()),
-    path('trash/', views.NoteTrashView.as_view()),
-    path('trash/<int:id>/', views.NoteTrash.as_view()),
-    path('archive/', views.NoteArchiveview.as_view()),
-    path('archive/<int:id>/', views.NoteArchive.as_view()),
-    path('collaborate/<int:id>/', views.NoteCollaborator.as_view()),
-    path('alluserlist/', views.getAllUser.as_view()),
-    path('', include(router.urls)),
+    url('notes/', views.NotesList.as_view()),
+    url('labels/', views.LabelList.as_view()),
+    url('label/<int:id>/', views.LabelViewDetails.as_view()),
+    url('note/<int:id>/', views.Notedata.as_view()),
+    url('trash/', views.NoteTrashView.as_view()),
+    url('trash/<int:id>/', views.NoteTrash.as_view()),
+    url('archive/', views.NoteArchiveview.as_view()),
+    url('archive/<int:id>/', views.NoteArchive.as_view()),
+    url('collaborate/<int:id>/', views.NoteCollaborator.as_view()),
+    url('alluserlist/', views.getAllUser.as_view()),
+    url('', include(router.urls)),
 
 ]
